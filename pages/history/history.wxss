@@ -1,0 +1,146 @@
+.page {
+  min-height: 100vh;
+  padding: 24rpx 28rpx 60rpx;
+}
+
+.gate {
+  margin-top: 120rpx;
+  text-align: center;
+  padding: 0 30rpx;
+}
+
+.gate-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2b2620;
+}
+
+.gate-desc {
+  margin-top: 16rpx;
+  font-size: 25rpx;
+  color: #9a9186;
+  line-height: 1.7;
+}
+
+.gate-btn {
+  margin-top: 40rpx;
+  display: inline-block;
+  padding: 22rpx 60rpx;
+}
+
+.empty {
+  padding: 140rpx 30rpx;
+  text-align: center;
+  color: #9a9186;
+  font-size: 26rpx;
+}
+
+.empty-main {
+  margin-bottom: 32rpx;
+}
+
+.empty-btn {
+  display: inline-block;
+  padding: 20rpx 48rpx;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+}
+
+.cell {
+  background: #fffdf8;
+  border-radius: 18rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(139, 106, 59, 0.07);
+}
+
+.poster {
+  position: relative;
+  width: 100%;
+  /* 海报是 9:16 竖版，列表按同比例展示，避免裁掉主体 */
+  height: 430rpx;
+  background: #efe7d8;
+}
+
+.poster-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.poster-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21rpx;
+  color: #a9a094;
+  background: #efe7d8;
+}
+
+/* 标题与时间压在图片底部，不占卡片高度 */
+.poster-meta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 40rpx 16rpx 16rpx;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(20, 16, 12, 0.62) 100%);
+}
+
+.poster-title {
+  font-size: 25rpx;
+  color: #fffdf8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poster-time {
+  margin-top: 4rpx;
+  font-size: 19rpx;
+  color: rgba(255, 253, 248, 0.72);
+}
+
+.cell-ops {
+  display: flex;
+  gap: 8rpx;
+  padding: 12rpx 12rpx 14rpx;
+}
+
+.op {
+  flex: 1;
+  text-align: center;
+  font-size: 21rpx;
+  padding: 11rpx 0;
+  border-radius: 999rpx;
+  background: rgba(138, 106, 59, 0.09);
+  color: #8a6a3b;
+}
+
+.op.primary {
+  background: #8a6a3b;
+  color: #fffdf8;
+}
+
+.op.danger {
+  background: rgba(178, 58, 46, 0.07);
+  color: #b23a2e;
+}
+
+.share-btn {
+  border: none;
+  line-height: inherit;
+  font-size: 21rpx;
+}
+
+.share-btn::after {
+  border: none;
+}

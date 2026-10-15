@@ -1,0 +1,57 @@
+<view class="page">
+  <inline-notice id="notice" bind:ready="onNoticeReady" />
+
+  <view class="bar">
+    <view class="bar-text">{{templates.length}} 个模板</view>
+    <view class="bar-action" bindtap="goEditor">空白画布</view>
+  </view>
+
+  <view wx:if="{{!templates.length}}" class="empty">加载中…</view>
+
+  <view wx:else class="list">
+    <view
+      class="tpl"
+      wx:for="{{templates}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="useTemplate"
+    >
+      <!-- 真实画板缩略图：按模板的多图层结构渲染 -->
+      <view class="tpl-thumb">
+        <canvas
+          type="2d"
+          class="tpl-canvas"
+          style="width: {{thumbWidth}}px; height: {{thumbHeight}}px;"
+        ></canvas>
+        <text class="tpl-badge {{item.source === 'builtin' ? '' : 'mine'}}">
+          {{item.source === 'builtin' ? '内置' : '我的'}}
+        </text>
+        <view class="tpl-count">{{item.layerCount}} 层</view>
+      </view>
+
+      <view class="tpl-main">
+        <view class="tpl-name">{{item.name}}</view>
+        <view class="tpl-desc">{{item.description}}</view>
+
+        <view class="layer-tags">
+          <text wx:if="{{item.stat.text}}" class="layer-tag text">文字 {{item.stat.text}}</text>
+          <text wx:if="{{item.stat.image}}" class="layer-tag image">贴图 {{item.stat.image}}</text>
+          <text wx:if="{{item.stat.sticker}}" class="layer-tag sticker">贴纸 {{item.stat.sticker}}</text>
+          <text wx:if="{{item.stat.seal}}" class="layer-tag seal">印章 {{item.stat.seal}}</text>
+          <text wx:if="{{!item.stat.text && !item.stat.image && !item.stat.sticker && !item.stat.seal}}" class="layer-tag none">纯图形</text>
+        </view>
+
+        <view class="tpl-meta-text">{{item.summary}}</view>
+      </view>
+
+      <view class="tpl-ops">
+        <view class="op use" data-key="{{item.key}}" catchtap="useTemplate">使用</view>
+        <view wx:if="{{item.source !== 'builtin'}}" class="op del" data-id="{{item.id}}" catchtap="remove">删除</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="tip">
+    每个模板都是一块多图层画板：文字层可改文案、字号、颜色与字体，贴图层可换素材，贴纸层可调色缩放与旋转。
+  </view>
+</view>

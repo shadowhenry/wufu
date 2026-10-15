@@ -1,0 +1,61 @@
+<view class="page">
+  <inline-notice id="notice" bind:ready="onNoticeReady" />
+  <view class="hero">
+    <view class="hero-title">海报工坊</view>
+    <view class="hero-sub">选素材 · 选模板 · AI 创作 · 一键分享</view>
+  </view>
+
+  <view class="quick-grid">
+    <view class="quick-card" bindtap="goMaterials">
+      <view class="quick-icon">素</view>
+      <view class="quick-name">选素材</view>
+      <view class="quick-desc">风景山水人文</view>
+    </view>
+    <view class="quick-card" bindtap="goTemplates">
+      <view class="quick-icon">模</view>
+      <view class="quick-name">选模板</view>
+      <view class="quick-desc">改字换图复用</view>
+    </view>
+    <view class="quick-card" bindtap="goBlank">
+      <view class="quick-icon">拼</view>
+      <view class="quick-name">自由拼贴</view>
+      <view class="quick-desc">贴纸文字多图拼接</view>
+    </view>
+    <view class="quick-card" bindtap="goAi">
+      <view class="quick-icon">AI</view>
+      <view class="quick-name">AI 创作</view>
+      <view class="quick-desc">文生图直接用</view>
+    </view>
+  </view>
+
+  <view class="section-title">最近使用的模板</view>
+  <view wx:if="{{templates.length}}" class="tpl-grid">
+    <view
+      class="tpl-card"
+      wx:for="{{templates}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="openTemplate"
+    >
+      <view class="tpl-name">{{item.name}}</view>
+      <view class="tpl-desc">{{item.description}}</view>
+    </view>
+  </view>
+  <view wx:else class="empty">还没有使用记录，去模板库挑一个吧</view>
+
+  <view class="section-title">最近生成</view>
+  <view wx:if="{{recent.length}}" class="recent-grid">
+    <view class="recent-item" wx:for="{{recent}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecord">
+      <view class="recent-poster">
+        <image class="thumb" src="{{item.displayPath}}" mode="aspectFill" />
+        <view wx:if="{{!item.displayPath}}" class="recent-loading">
+          {{item.thumbFailed ? '不可用' : '加载中'}}
+        </view>
+      </view>
+      <view class="recent-title">{{item.title}}</view>
+      <view class="recent-time">{{item.timeText}}</view>
+    </view>
+  </view>
+  <view wx:elif="{{recentLoading}}" class="empty">加载中…</view>
+  <view wx:else class="empty">还没有生成过海报，去模板里挑一个吧</view>
+</view>

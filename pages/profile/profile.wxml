@@ -1,0 +1,55 @@
+<view class="page">
+  <inline-notice id="notice" bind:ready="onNoticeReady" />
+  <view class="header">
+    <view class="avatar">{{initial}}</view>
+    <view class="who">
+      <view class="name">{{userName || '未登录'}}</view>
+      <view class="id" wx:if="{{signedIn}}">{{shortId}}</view>
+    </view>
+    <view wx:if="{{!signedIn}}" class="login" bindtap="signIn">登录</view>
+  </view>
+
+  <view class="stats">
+    <view class="stat">
+      <view class="stat-num">{{stats.posters}}</view>
+      <view class="stat-label">生成海报</view>
+    </view>
+    <view class="stat">
+      <view class="stat-num">{{stats.templates}}</view>
+      <view class="stat-label">我的模板</view>
+    </view>
+    <view class="stat">
+      <view class="stat-num">{{stats.materials}}</view>
+      <view class="stat-label">我的素材</view>
+    </view>
+  </view>
+
+  <view class="section-title">创作入口</view>
+  <view class="menu">
+    <view class="menu-item" bindtap="goTemplates">
+      <text class="menu-name">模板库</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="goMaterials">
+      <text class="menu-name">素材库</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="goAi">
+      <text class="menu-name">AI 生成素材</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="goHistory">
+      <text class="menu-name">历史记录</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="section-title">关于</view>
+  <view class="about">
+    <view class="about-line">海报工坊 · 云原生小程序</view>
+    <view class="about-line">素材、模板与历史记录保存在云端，AI 能力由平台提供。</view>
+    <view class="about-line" wx:if="{{!signedIn}}">登录后才能保存海报、素材和模板。</view>
+  </view>
+
+  <view wx:if="{{signedIn}}" class="signout" bindtap="signOut">退出登录</view>
+</view>

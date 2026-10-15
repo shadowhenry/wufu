@@ -1,0 +1,46 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/materials/materials",
+    "pages/templates/templates",
+    "pages/editor/editor",
+    "pages/picker/picker",
+    "pages/ai/ai",
+    "pages/history/history",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#f7f3ec",
+    "navigationBarTitleText": "海报工坊",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f7f3ec"
+  },
+  "tabBar": {
+    "color": "#9a9186",
+    "selectedColor": "#8a6a3b",
+    "backgroundColor": "#fffdf8",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "创作"
+      },
+      {
+        "pagePath": "pages/materials/materials",
+        "text": "素材"
+      },
+      {
+        "pagePath": "pages/templates/templates",
+        "text": "模板"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "历史"
+      }
+    ]
+  },
+  "lazyCodeLoading": "requiredComponents",
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,28 @@
+{
+  "miniprogramRoot": "./",
+  "compileType": "miniprogram",
+  "appid": "",
+  "projectname": "poster-studio",
+  "description": "海报工坊 - 素材库 / 模板库 / AI 生成 / 历史记录",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "coverView": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": ".tmp-materials" },
+      { "type": "folder", "value": "tests" }
+    ],
+    "include": []
+  },
+  "condition": {}
+}

@@ -1,0 +1,4 @@
+<view wx:if="{{visible}}" class="notice notice-{{type}}">
+  <text class="notice-text">{{message}}</text>
+  <text class="notice-close" bindtap="dismiss">×</text>
+</view>

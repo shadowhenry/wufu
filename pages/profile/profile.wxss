@@ -1,0 +1,131 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: 60rpx;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 56rpx 32rpx 36rpx;
+  background: linear-gradient(160deg, #f2e7d2 0%, #e8dcc4 100%);
+}
+
+.avatar {
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 50%;
+  background: #8a6a3b;
+  color: #fffdf8;
+  font-size: 42rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: STKaiti, Kaiti SC, serif;
+}
+
+.who {
+  flex: 1;
+  margin-left: 24rpx;
+}
+
+.name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2b2620;
+}
+
+.id {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #8d8477;
+}
+
+.login {
+  font-size: 24rpx;
+  color: #fffdf8;
+  background: #8a6a3b;
+  padding: 14rpx 36rpx;
+  border-radius: 999rpx;
+}
+
+.stats {
+  display: flex;
+  background: #fffdf8;
+  padding: 32rpx 0;
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #8a6a3b;
+}
+
+.stat-label {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #9a9186;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2b2620;
+  margin: 36rpx 28rpx 16rpx;
+}
+
+.menu {
+  margin: 0 28rpx;
+  background: #fffdf8;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 24rpx;
+  border-bottom: 1rpx solid rgba(138, 106, 59, 0.09);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-name {
+  font-size: 27rpx;
+  color: #2b2620;
+}
+
+.menu-arrow {
+  font-size: 32rpx;
+  color: #c4bba9;
+}
+
+.about {
+  margin: 0 28rpx;
+  background: #fffdf8;
+  border-radius: 20rpx;
+  padding: 24rpx;
+}
+
+.about-line {
+  font-size: 23rpx;
+  color: #8d8477;
+  line-height: 1.85;
+}
+
+.signout {
+  margin: 40rpx 28rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #b23a2e;
+  background: rgba(178, 58, 46, 0.08);
+  padding: 26rpx;
+  border-radius: 999rpx;
+}

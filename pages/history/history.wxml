@@ -1,0 +1,44 @@
+<view class="page">
+  <inline-notice id="notice" bind:ready="onNoticeReady" />
+  <view wx:if="{{!signedIn}}" class="gate">
+    <view class="gate-title">登录后查看历史记录</view>
+    <view class="gate-desc">这里存放你最终保存下来的海报，换设备也能继续编辑。</view>
+    <view class="btn-primary gate-btn" bindtap="signIn">微信一键登录</view>
+  </view>
+
+  <view wx:elif="{{loading}}" class="empty">加载中…</view>
+
+  <view wx:elif="{{!items.length}}" class="empty">
+    <view class="empty-main">还没有保存过海报</view>
+    <view class="btn-primary empty-btn" bindtap="goTemplates">去挑一个模板</view>
+  </view>
+
+  <!-- 海报图列表：图为主体，标题时间压在图上，操作收在图下 -->
+  <view wx:else class="grid">
+    <view class="cell" wx:for="{{items}}" wx:key="id">
+      <view class="poster" data-id="{{item.id}}" bindtap="openDetail">
+        <image class="poster-img" src="{{item.displayPath}}" mode="aspectFill" />
+        <view wx:if="{{!item.displayPath}}" class="poster-loading">
+          {{item.thumbFailed ? '图片不可用' : '加载中…'}}
+        </view>
+        <view wx:if="{{item.displayPath}}" class="poster-meta">
+          <view class="poster-title">{{item.title}}</view>
+          <view class="poster-time">{{item.timeText}}</view>
+        </view>
+      </view>
+
+      <view class="cell-ops">
+        <view class="op" data-id="{{item.id}}" catchtap="openDetail">编辑</view>
+        <button
+          wx:if="{{item.displayPath}}"
+          class="op primary share-btn"
+          open-type="share"
+          data-id="{{item.id}}"
+          data-title="{{item.title}}"
+          data-image="{{item.displayPath}}"
+        >分享</button>
+        <view class="op danger" data-id="{{item.id}}" catchtap="remove">删除</view>
+      </view>
+    </view>
+  </view>
+</view>
