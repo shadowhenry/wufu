@@ -60,11 +60,8 @@ Page({
 
   signIn() {
     app.requireSignIn().then((ok) => {
-      if (!ok) {
-        app.toast('登录失败，请重试')
-        return
-      }
-      app.toast('已登录')
+      // 用户主动取消不是错误；真正的登录失败已由 doSignIn 提示过
+      if (!ok) return
       this.refresh()
     })
   },
@@ -97,12 +94,12 @@ Page({
   },
 
   goAi() {
-    wx.navigateTo({ url: '/pages/ai/ai?mode=image' })
+    wx.navigateTo({ url: '/pages/create/create?mode=ai' })
   },
 
   onShareAppMessage() {
     return {
-      title: '海报工坊：AI 一键生成国风海报',
+      title: '平面工坊：一句话 AI 出海报',
       path: '/pages/index/index'
     }
   }

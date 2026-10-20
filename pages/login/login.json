@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "微信登录",
+  "navigationBarBackgroundColor": "#f7f3ec",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#f7f3ec",
+  "usingComponents": {
+    "inline-notice": "/components/inline-notice/inline-notice"
+  }
+}

@@ -1,5 +1,4 @@
 .page {
-  min-height: 100vh;
   padding-bottom: 160rpx;
 }
 
@@ -39,6 +38,13 @@
   color: #9a9186;
 }
 
+.upload-tip {
+  padding: 0 28rpx 12rpx;
+  font-size: 20rpx;
+  color: #a9a094;
+  line-height: 1.5;
+}
+
 .bar-action {
   font-size: 24rpx;
   color: #8a6a3b;
@@ -47,70 +53,41 @@
   background: rgba(138, 106, 59, 0.1);
 }
 
+/* 没有文字行之后改成三列，一屏能看到更多素材 */
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20rpx;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14rpx;
   padding: 12rpx 28rpx;
 }
 
 .cell {
   position: relative;
   background: #fffdf8;
-  border-radius: 18rpx;
+  border-radius: 14rpx;
   overflow: hidden;
   box-shadow: 0 4rpx 16rpx rgba(139, 106, 59, 0.07);
 }
 
 .thumb {
   width: 100%;
-  height: 300rpx;
+  height: 220rpx;
   display: block;
   background: #efe7d8;
 }
 
-.cell-name {
-  padding: 14rpx 16rpx 6rpx;
-  font-size: 25rpx;
-  color: #2b2620;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cell-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16rpx 16rpx;
-}
-
-.cell-cat {
-  font-size: 20rpx;
-  color: #9a9186;
-}
-
-.cell-badge {
-  font-size: 19rpx;
-  color: #8a6a3b;
-  background: rgba(138, 106, 59, 0.1);
-  padding: 3rpx 12rpx;
-  border-radius: 999rpx;
-}
-
-.cell-badge.ai {
-  color: #5c7c8a;
-  background: rgba(92, 124, 138, 0.12);
-}
-
+/* 删除做成角标圆点，避免在纯图墙上出现文字块 */
 .cell-del {
   position: absolute;
-  top: 12rpx;
-  right: 12rpx;
-  background: rgba(40, 34, 28, 0.6);
+  top: 8rpx;
+  right: 8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 36rpx;
+  text-align: center;
+  background: rgba(40, 34, 28, 0.55);
   color: #fff;
-  font-size: 20rpx;
-  padding: 6rpx 16rpx;
+  font-size: 26rpx;
   border-radius: 999rpx;
 }
 

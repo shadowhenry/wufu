@@ -3,16 +3,15 @@
     "pages/index/index",
     "pages/materials/materials",
     "pages/templates/templates",
-    "pages/editor/editor",
-    "pages/picker/picker",
-    "pages/ai/ai",
+    "pages/create/create",
     "pages/history/history",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/login/login"
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#f7f3ec",
-    "navigationBarTitleText": "海报工坊",
+    "navigationBarTitleText": "平面工坊",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f7f3ec"
   },
@@ -24,23 +23,22 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "创作"
+        "text": "首页"
       },
       {
         "pagePath": "pages/materials/materials",
-        "text": "素材"
+        "text": "素材库"
       },
       {
         "pagePath": "pages/templates/templates",
-        "text": "模板"
+        "text": "模板库"
       },
       {
         "pagePath": "pages/history/history",
-        "text": "历史"
+        "text": "我的作品"
       }
     ]
   },
-  "lazyCodeLoading": "requiredComponents",
   "style": "v2",
   "sitemapLocation": "sitemap.json"
 }

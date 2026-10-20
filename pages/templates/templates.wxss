@@ -1,13 +1,40 @@
+/* 与素材库同一套布局模型：页面只留底部留白，横向边距由各块自己带 */
 .page {
-  min-height: 100vh;
-  padding: 0 28rpx 60rpx;
+  padding-bottom: 60rpx;
+}
+
+/* 物料类型筛选：与首页共用一份选择。
+   只剩一类时整条不渲染（见 showTypeBar），之后再开门类会自动出现。 */
+.type-bar {
+  display: flex;
+  gap: 14rpx;
+  padding: 24rpx 28rpx 4rpx;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.type-chip {
+  flex-shrink: 0;
+  padding: 14rpx 28rpx;
+  border-radius: 999rpx;
+  background: #fffdf8;
+  border: 2rpx solid rgba(138, 106, 59, 0.16);
+  font-size: 24rpx;
+  color: #6b6357;
+}
+
+.type-chip.is-active {
+  background: #8a6a3b;
+  border-color: #8a6a3b;
+  color: #fffdf8;
+  font-weight: 600;
 }
 
 .bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 0 12rpx;
+  padding: 24rpx 28rpx 12rpx;
 }
 
 .bar-text {
@@ -23,151 +50,49 @@
   background: rgba(138, 106, 59, 0.1);
 }
 
-.list {
-  padding-top: 8rpx;
+.upload-tip {
+  padding: 0 28rpx 12rpx;
+  font-size: 20rpx;
+  color: #a9a094;
+  line-height: 1.5;
 }
 
-.tpl {
-  display: flex;
-  align-items: stretch;
-  background: #fffdf8;
-  border-radius: 22rpx;
-  padding: 20rpx;
-  margin-bottom: 20rpx;
-  box-shadow: 0 4rpx 18rpx rgba(139, 106, 59, 0.07);
+/* 三列图墙，与素材库同一套尺寸 */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14rpx;
+  padding: 12rpx 28rpx;
 }
 
-.tpl-thumb {
+.cell {
   position: relative;
-  width: 160rpx;
-  height: 214rpx;
-  flex-shrink: 0;
+  background: #fffdf8;
+  border-radius: 14rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(139, 106, 59, 0.07);
 }
 
-.tpl-canvas {
-  display: block;
+.thumb {
   width: 100%;
-  height: 100%;
+  height: 220rpx;
+  display: block;
   background: #efe7d8;
-  border-radius: 12rpx;
 }
 
-.tpl-count {
-  position: absolute;
-  right: 8rpx;
-  bottom: 8rpx;
-  font-size: 17rpx;
-  color: #fffdf8;
-  background: rgba(40, 34, 28, 0.62);
-  padding: 2rpx 10rpx;
-  border-radius: 999rpx;
-}
-
-.layer-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-  margin-top: 14rpx;
-}
-
-.layer-tag {
-  font-size: 19rpx;
-  padding: 4rpx 14rpx;
-  border-radius: 999rpx;
-}
-
-.layer-tag.text {
-  color: #8a6a3b;
-  background: rgba(138, 106, 59, 0.12);
-}
-
-.layer-tag.image {
-  color: #3f6c8f;
-  background: rgba(63, 108, 143, 0.12);
-}
-
-.layer-tag.sticker {
-  color: #7a5a8f;
-  background: rgba(122, 90, 143, 0.12);
-}
-
-.layer-tag.seal {
-  color: #b23a2e;
-  background: rgba(178, 58, 46, 0.1);
-}
-
-.layer-tag.none {
-  color: #9a9186;
-  background: rgba(154, 145, 134, 0.14);
-}
-
-.tpl-badge {
+/* 删除做成角标圆点，避免在纯图墙上出现文字块 */
+.cell-del {
   position: absolute;
   top: 8rpx;
-  left: 8rpx;
-  font-size: 18rpx;
-  color: #8a6a3b;
-  background: rgba(255, 253, 248, 0.9);
-  padding: 3rpx 12rpx;
-  border-radius: 999rpx;
-}
-
-.tpl-badge.mine {
-  color: #5c7c8a;
-}
-
-.tpl-main {
-  flex: 1;
-  margin-left: 22rpx;
-  display: flex;
-  flex-direction: column;
-}
-
-.tpl-name {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #2b2620;
-}
-
-.tpl-desc {
-  margin-top: 10rpx;
-  font-size: 22rpx;
-  color: #9a9186;
-  line-height: 1.55;
-}
-
-.tpl-meta {
-  margin-top: auto;
-}
-
-.tpl-meta-text {
-  font-size: 20rpx;
-  color: #b3aa9c;
-}
-
-.tpl-ops {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 14rpx;
-  margin-left: 16rpx;
-}
-
-.op {
-  font-size: 22rpx;
-  padding: 12rpx 24rpx;
-  border-radius: 999rpx;
+  right: 8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 36rpx;
   text-align: center;
-}
-
-.op.use {
-  background: #8a6a3b;
-  color: #fffdf8;
-}
-
-.op.del {
-  background: rgba(178, 58, 46, 0.1);
-  color: #b23a2e;
+  background: rgba(40, 34, 28, 0.55);
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: 999rpx;
 }
 
 .empty {
@@ -177,10 +102,24 @@
   font-size: 26rpx;
 }
 
+.empty-main {
+  margin-bottom: 32rpx;
+}
+
+.empty-ops {
+  display: flex;
+  gap: 16rpx;
+  justify-content: center;
+}
+
+.empty-ops .btn-ghost {
+  padding: 18rpx 40rpx;
+}
+
 .tip {
-  margin-top: 20rpx;
+  margin-top: 24rpx;
   font-size: 22rpx;
   color: #a9a094;
   line-height: 1.7;
-  padding: 0 8rpx;
+  padding: 0 28rpx;
 }

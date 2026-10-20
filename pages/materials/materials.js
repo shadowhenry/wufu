@@ -2,6 +2,7 @@ const app = getApp()
 const { CATEGORIES, BUILTIN_MATERIALS, categoryLabel } = require('../../utils/materials')
 const repo = require('../../utils/repository')
 const image = require('../../utils/image')
+const upload = require('../../utils/upload')
 
 Page({
   data: {
@@ -74,21 +75,47 @@ Page({
 
   preview(event) {
     const id = event.currentTarget.dataset.id
-    const target = this.data.items.find((item) => item.id === id)
+    const target = this.data.items.find((item) => String(item.id) === String(id))
     if (!target || !target.displayPath) return
     const urls = this.data.items.filter((item) => item.displayPath).map((item) => item.displayPath)
     wx.previewImage({ current: target.displayPath, urls: urls })
   },
 
+  /**
+   * 拿当前素材直接开做：素材图作为底图进创作页，
+   * 用户再加贴图与文字，交给 AI 图生图。
+   * 免去「进创作页 → 再翻一遍素材库」这一圈。
+   */
+  useMaterial(event) {
+    const id = event.currentTarget.dataset.id
+    const target = this.data.items.find((item) => String(item.id) === String(id))
+    if (!target) return
+    // 内置素材带本地路径，云端素材带存储路径，创作页据此分别取图
+    const query = [
+      'mode=material',
+      'name=' + encodeURIComponent(target.name || '素材图'),
+      target.source === 'builtin'
+        ? 'path=' + encodeURIComponent(target.displayPath || '')
+        : 'storagePath=' + encodeURIComponent(target.storagePath || '')
+    ].join('&')
+    wx.navigateTo({ url: '/pages/create/create?' + query })
+  },
+
   remove(event) {
     const id = event.currentTarget.dataset.id
+    // 写入权限前置检查：游客态直接跳登录界面，不发起注定失败的请求
+    if (!app.canWrite()) {
+      app.goLogin('删除素材需要登录')
+      return
+    }
+    const target = this.data.items.find((item) => String(item.id) === String(id))
     wx.showModal({
       title: '删除素材',
       content: '删除后无法恢复，确定删除吗？',
       confirmColor: '#8a6a3b',
       success: (res) => {
         if (!res.confirm) return
-        repo.deleteMaterial(id)
+        repo.deleteMaterial(id, target && target.storagePath)
           .then((removed) => {
             if (!removed) {
               app.toast('该素材不存在或不属于你')
@@ -102,7 +129,15 @@ Page({
     })
   },
 
+  /**
+   * 上传图片：属于写操作，先确认登录态。
+   * 游客直接跳登录界面，登录成功后返回本页再点上传即可。
+   */
   uploadImage() {
+    if (!app.canWrite()) {
+      app.goLogin('上传素材需要登录')
+      return
+    }
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -118,39 +153,16 @@ Page({
   },
 
   saveUpload(filePath) {
-    app.requireSignIn().then((ok) => {
-      if (!ok) {
-        app.toast('请先登录')
-        return
-      }
+    app.ensureWritable('上传素材').then((ok) => {
+      if (!ok) return
       wx.showLoading({ title: '压缩中…', mask: true })
-      image.compressUnderLimit(filePath)
+      // 与创作页共用同一条入库链路：压缩 → 上传 → 建记录
+      upload
+        .saveToMaterials(app, filePath, { name: '我的素材' })
         .then((result) => {
-          if (result.stillOversize) {
-            // 压到最低仍超标：明确告知，不静默上传一张巨大的图
-            throw new Error('图片过大（' + image.formatSize(result.bytes) + '），换一张试试')
-          }
-          this.compressedInfo = result
-          wx.showLoading({ title: '上传中…', mask: true })
-          const uid = app.globalData.user && app.globalData.user.id
-          return repo.uploadLocalFile(uid, 'materials', result.path, 'image/jpeg')
-        })
-        .then((storagePath) =>
-          repo.insertMaterial({
-            name: '我的素材',
-            category: 'landscape',
-            source: 'upload',
-            storage_path: storagePath,
-            prompt: null,
-            width: this.compressedInfo ? this.compressedInfo.width : 900,
-            height: this.compressedInfo ? this.compressedInfo.height : 1200,
-            owner_name: (app.globalData.user && app.globalData.user.name) || null
-          })
-        )
-        .then(() => {
           wx.hideLoading()
-          const bytes = this.compressedInfo ? this.compressedInfo.bytes : 0
-          app.toast('已加入素材库' + (bytes ? ' · ' + image.formatSize(bytes) : ''))
+          this.compressedInfo = result.info
+          app.toast('已加入素材库 · ' + image.formatSize(result.info.bytes))
           this.loadMaterials()
         })
         .catch((error) => {
@@ -165,6 +177,6 @@ Page({
   },
 
   goAi() {
-    wx.navigateTo({ url: '/pages/ai/ai?mode=image' })
+    wx.navigateTo({ url: '/pages/create/create?mode=ai' })
   }
 })

@@ -1,11 +1,93 @@
 .page {
-  min-height: 100vh;
   padding-bottom: 60rpx;
 }
 
 .hero {
-  padding: 56rpx 40rpx 40rpx;
+  padding: 40rpx 40rpx 40rpx;
   background: linear-gradient(160deg, #f2e7d2 0%, #e8dcc4 100%);
+}
+
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.hero-brand {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 物料类型 3D 轮播：卡片大小基本一致，两侧只轻微向后缩 */
+.type-stage {
+  padding: 24rpx 0 6rpx;
+}
+
+/* perspective 放在轨道上，卡片才有统一的透视消失点 */
+.type-track {
+  position: relative;
+  height: 170rpx;
+  perspective: 900rpx;
+  perspective-origin: 50% 42%;
+}
+
+.type-card {
+  position: absolute;
+  left: 50%;
+  top: 6rpx;
+  width: 250rpx;
+  /* 固定高度：active 卡片多一行规格文字，不锁高会比两侧高出一大截 */
+  height: 132rpx;
+  margin-left: -125rpx;
+  box-sizing: border-box;
+  padding: 24rpx 18rpx 22rpx;
+  border-radius: 22rpx;
+  background: #fffdf8;
+  border: 2rpx solid rgba(138, 106, 59, 0.16);
+  text-align: center;
+  overflow: hidden;
+  box-shadow: 0 6rpx 16rpx rgba(139, 106, 59, 0.08);
+  transform-style: preserve-3d;
+  /* 位移/缩放/翻转都走过渡，切换时才滑得动 */
+  transition: transform 0.36s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.36s ease, box-shadow 0.36s ease;
+  will-change: transform;
+}
+
+.type-card.is-active {
+  background: rgba(138, 106, 59, 0.92);
+  border-color: rgba(138, 106, 59, 0.92);
+  box-shadow: 0 14rpx 32rpx rgba(138, 106, 59, 0.24);
+}
+
+.type-icon {
+  font-size: 24rpx;
+  color: rgba(138, 106, 59, 0.7);
+  font-family: STKaiti, Kaiti SC, serif;
+}
+
+.type-card.is-active .type-icon {
+  font-size: 26rpx;
+  color: rgba(255, 253, 248, 0.9);
+}
+
+.type-name {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #6b6357;
+}
+
+.type-card.is-active .type-name {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #fffdf8;
+}
+
+.type-spec {
+  margin-top: 6rpx;
+  font-size: 18rpx;
+  color: rgba(255, 253, 248, 0.75);
 }
 
 .hero-title {
@@ -27,7 +109,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20rpx;
-  padding: 28rpx;
+  padding: 16rpx 28rpx 28rpx;
 }
 
 .quick-card {
@@ -98,6 +180,24 @@
   margin: 36rpx 28rpx 20rpx;
 }
 
+/* 区块标题行：右侧放「我的」入口，登录后才显示 */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-head .section-title {
+  margin-bottom: 0;
+}
+
+.section-link {
+  flex-shrink: 0;
+  margin: 36rpx 28rpx 20rpx;
+  font-size: 24rpx;
+  color: #8a6a3b;
+}
+
 .recent-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -158,4 +258,98 @@
   text-align: center;
   color: #9a9186;
   font-size: 26rpx;
+}
+
+/* 游客空状态：文案 + 登录按钮 */
+.empty-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.empty-main {
+  color: #7a6e5c;
+  line-height: 1.6;
+}
+
+/* 与「我的作品」页的登录按钮保持一致：宽度贴合文字，不拉成长条 */
+.gate-btn {
+  margin-top: 24rpx;
+  display: inline-block;
+  padding: 22rpx 60rpx;
+}
+/* ---------- 底部登录授权框 ---------- */
+
+.login-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(40, 34, 28, 0.45);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.login-sheet {
+  background: #fffdf8;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 18rpx 40rpx 48rpx;
+  text-align: center;
+  animation: sheet-up 0.24s ease-out;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-grip {
+  width: 72rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: rgba(138, 106, 59, 0.22);
+  margin: 0 auto 26rpx;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2b2620;
+}
+
+.sheet-desc {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #9a9186;
+  line-height: 1.6;
+}
+
+.sheet-desc-sub {
+  margin-top: 6rpx;
+}
+
+/* 弹层里的主按钮占满宽度，这里是个例外——它是唯一的操作 */
+.sheet-btn {
+  margin-top: 32rpx;
+  display: block;
+  padding: 26rpx 0;
+}
+
+.sheet-btn.disabled {
+  background: #cfc6b8;
+  color: #fdfbf7;
+}
+
+.sheet-later {
+  margin-top: 26rpx;
+  font-size: 25rpx;
+  color: #b3aa9c;
 }

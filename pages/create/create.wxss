@@ -1,0 +1,275 @@
+.page {
+  padding: 24rpx 28rpx 60rpx;
+}
+
+.mode-head {
+  margin-bottom: 8rpx;
+}
+
+.mode-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #2b2620;
+}
+
+.mode-hint {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: #9a9186;
+  line-height: 1.6;
+}
+
+.block {
+  margin-top: 26rpx;
+}
+
+.field-label {
+  font-size: 23rpx;
+  color: #8d8477;
+  margin: 0 0 10rpx;
+}
+
+/* ---------- 底图 ---------- */
+
+/* 底图区就是一块固定大小的创作区：整张图自适应进去，
+   铺不满的那条边溢出后由用户拖动看全，所以这里不裁图、不锁比例。
+   不放任何说明文字，只在右下角压一个「更换」。
+   图里自带的字是图的一部分，不是我们加的。 */
+
+/* 创作区大小固定，不随出图尺寸变化 */
+.ref-stage {
+  position: relative;
+  width: 100%;
+  height: 640rpx;
+  border-radius: 18rpx;
+  overflow: hidden;
+  background: #efe7d8;
+}
+
+/* 图片比区域大时，上下左右都能拖 */
+.ref-scroll {
+  width: 100%;
+  height: 100%;
+  white-space: nowrap;
+}
+
+/* 图片实际尺寸由 JS 按「至少铺满一条边」算出；未算出前铺满区域 */
+.ref-canvas {
+  display: inline-block;
+  vertical-align: top;
+  width: 100%;
+  height: 100%;
+}
+
+.ref-thumb {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ref-picker {
+  position: relative;
+  height: 640rpx;
+  border-radius: 18rpx;
+  border: 2rpx dashed rgba(138, 106, 59, 0.3);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ref-plus {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60rpx;
+  color: #8a6a3b;
+  line-height: 1;
+}
+
+.ref-clear {
+  position: absolute;
+  right: 16rpx;
+  bottom: 16rpx;
+  background: rgba(40, 34, 28, 0.62);
+  color: #fff;
+  font-size: 22rpx;
+  padding: 8rpx 22rpx;
+  border-radius: 999rpx;
+}
+
+/* ---------- 贴图 ---------- */
+
+.art-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+}
+
+.art-cell {
+  position: relative;
+  border-radius: 14rpx;
+  overflow: visible;
+}
+
+.art-thumb {
+  width: 100%;
+  height: 210rpx;
+  border-radius: 14rpx;
+  background: #efe7d8;
+  display: block;
+}
+
+.art-add {
+  height: 210rpx;
+  border-radius: 14rpx;
+  border: 2rpx dashed rgba(138, 106, 59, 0.3);
+  background: #fffdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.art-plus {
+  font-size: 52rpx;
+  color: #8a6a3b;
+  line-height: 1;
+}
+
+.art-del {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 999rpx;
+  background: rgba(40, 34, 28, 0.62);
+  color: #fff;
+  font-size: 26rpx;
+  line-height: 44rpx;
+  text-align: center;
+}
+
+/* ---------- 出图尺寸 ---------- */
+
+.size-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+
+.size-chip {
+  font-size: 24rpx;
+  color: #8d8477;
+  background: #fffdf8;
+  border: 2rpx solid rgba(138, 106, 59, 0.18);
+  padding: 14rpx 26rpx;
+  border-radius: 999rpx;
+  box-sizing: border-box;
+}
+
+.size-chip.is-active {
+  color: #fffdf8;
+  background: #8a6a3b;
+  border-color: #8a6a3b;
+}
+
+/* ---------- 提示词 ---------- */
+
+.input {
+  width: 100%;
+  /* 提示词是主要输入，给足高度，避免写两句就要滚动 */
+  min-height: 280rpx;
+  background: #fffdf8;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+  color: #2b2620;
+  box-sizing: border-box;
+}
+
+.preview-box {
+  background: #fffdf8;
+  border-radius: 18rpx;
+  padding: 22rpx;
+  margin: 18rpx 0;
+}
+
+.preview-title {
+  font-size: 23rpx;
+  color: #8d8477;
+  margin-bottom: 12rpx;
+}
+
+.preview-text {
+  font-size: 24rpx;
+  color: #4a4034;
+  line-height: 1.7;
+}
+
+/* ---------- 生成 ---------- */
+
+.actions {
+  margin: 26rpx 0;
+}
+
+.btn-primary.disabled {
+  background: #cfc6b8;
+  color: #fdfbf7;
+}
+
+.results {
+  margin-top: 10rpx;
+}
+
+.result-item {
+  margin-bottom: 22rpx;
+  background: #fffdf8;
+  border-radius: 18rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(139, 106, 59, 0.08);
+}
+
+.result-img {
+  width: 100%;
+  display: block;
+  background: #efe7d8;
+}
+
+.result-ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  padding: 18rpx;
+}
+
+.result-op {
+  /* 一行三个，第六个按钮自动换行 */
+  flex: 0 0 calc(33.333% - 10rpx);
+  text-align: center;
+  font-size: 24rpx;
+  color: #8a6a3b;
+  background: rgba(138, 106, 59, 0.1);
+  padding: 18rpx 8rpx;
+  border-radius: 999rpx;
+}
+
+.result-op.done {
+  color: #4a7c59;
+  background: rgba(74, 124, 89, 0.12);
+}
+
+.result-op.share {
+  color: #fffdf8;
+  background: #8a6a3b;
+  border: none;
+  line-height: inherit;
+}
+
+.result-op.share::after {
+  border: none;
+}

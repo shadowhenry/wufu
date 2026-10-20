@@ -16,6 +16,7 @@
     <view class="bar-text">{{total}} 个素材</view>
     <view class="bar-action" bindtap="goUpload">上传图片</view>
   </view>
+  <view class="upload-tip">点图直接进创作页（以它为底图），长按可看大图；上传时会自动压到 1M 以内</view>
 
   <view wx:if="{{loading}}" class="empty">加载中…</view>
   <view wx:elif="{{!items.length}}" class="empty">
@@ -26,16 +27,18 @@
     </view>
   </view>
 
+  <!-- 纯图墙：缩略图下方不放任何文字，点图即进创作页，长按看大图 -->
   <view wx:else class="grid">
     <view class="cell" wx:for="{{items}}" wx:key="id">
-      <image class="thumb" src="{{item.displayPath}}" mode="aspectFill" data-id="{{item.id}}" bindtap="preview" />
-      <view class="cell-name">{{item.name}}</view>
-      <view class="cell-foot">
-        <text class="cell-cat">{{item.categoryLabel}}</text>
-        <text wx:if="{{item.source === 'builtin'}}" class="cell-badge">内置</text>
-        <text wx:else class="cell-badge ai">AI</text>
-      </view>
-      <view wx:if="{{item.source !== 'builtin'}}" class="cell-del" data-id="{{item.id}}" catchtap="remove">删除</view>
+      <image
+        class="thumb"
+        src="{{item.displayPath}}"
+        mode="aspectFill"
+        data-id="{{item.id}}"
+        bindtap="useMaterial"
+        bindlongpress="preview"
+      />
+      <view wx:if="{{item.source !== 'builtin'}}" class="cell-del" data-id="{{item.id}}" catchtap="remove">×</view>
     </view>
   </view>
 

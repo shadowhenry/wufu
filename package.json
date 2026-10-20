@@ -1,9 +1,9 @@
 {
   "name": "poster-studio",
   "version": "1.0.0",
-  "description": "海报工坊小程序",
+  "description": "平面工坊小程序：海报 / 明信片 / 名片 / 易拉宝 / 请柬",
   "private": true,
   "dependencies": {
-    "@tencent-ai/workbuddy-cloud-sdk": "dev"
+    "@tencent-ai/workbuddy-cloud-sdk": "^0.1.4"
   }
 }

@@ -42,26 +42,28 @@ Page({
 
   signIn() {
     app.requireSignIn().then((ok) => {
-      if (!ok) {
-        app.toast('登录失败，请重试')
-        return
-      }
+      // 用户主动取消不是错误；真正的登录失败已由 doSignIn 提示过
+      if (!ok) return
       this.setData({ signedIn: true, page: 1, hasMore: true })
-      this.load()
+      this.fetch()
     })
   },
 
+  /**
+ * 历史记录是私有数据。
+ *
+ * 这里必须**只读状态、绝不触发登录**：本页是 tab 页，onShow 会被调用，
+ * 而 requireSignIn 现在会弹确认框——若在这里调用，
+ * 游客点开「我的作品」就被弹窗拦住了，违背权限矩阵的游客可浏览原则。
+ * 登录只应由用户主动点击「登录」按钮触发。
+ */
   load() {
-    if (!this.data.signedIn) {
-      return app.requireSignIn().then((ok) => {
-        this.setData({ signedIn: ok })
-        if (!ok) {
-          this.setData({ items: [], loading: false })
-          return null
-        }
-        return this.fetch()
-      })
+    if (!app.canWrite()) {
+      this.setData({ signedIn: false, items: [], loading: false })
+      return Promise.resolve(null)
     }
+    // 已登录才拉取，不再在此处静默尝试登录
+    this.setData({ signedIn: true })
     return this.fetch()
   },
 
@@ -114,9 +116,21 @@ Page({
     })
   },
 
+  /**
+   * 作品就是一张成品图，点开直接看大图。
+   * 去掉编辑器之后没有「继续编辑」这回事了，要看就给最大的图。
+   */
   openDetail(event) {
     const id = event.currentTarget.dataset.id
-    wx.navigateTo({ url: '/pages/editor/editor?recordId=' + id })
+    const target = this.data.items.find((item) => String(item.id) === String(id))
+    if (!target || !target.displayPath) {
+      app.toast('图片还没加载好')
+      return
+    }
+    const urls = this.data.items
+      .filter((item) => item.displayPath)
+      .map((item) => item.displayPath)
+    wx.previewImage({ current: target.displayPath, urls: urls })
   },
 
   sharePoster(event) {
@@ -131,13 +145,14 @@ Page({
 
   remove(event) {
     const id = event.currentTarget.dataset.id
+    const target = this.data.items.find((item) => String(item.id) === String(id))
     wx.showModal({
       title: '删除海报',
       content: '删除后无法恢复，确定删除吗？',
       confirmColor: '#b23a2e',
       success: (res) => {
         if (!res.confirm) return
-        repo.deleteRecord(id)
+        repo.deleteRecord(id, target && target.storagePath)
           .then((removed) => {
             if (!removed) {
               app.toast('该记录不存在或不属于你')
@@ -160,7 +175,7 @@ Page({
     const id = event && event.target && event.target.dataset ? event.target.dataset.id : null
     const target = id ? this.data.items.find((item) => String(item.id) === String(id)) : null
     return {
-      title: target ? '我做的海报：' + target.title : '海报工坊：AI 一键生成海报',
+      title: target ? '我做的作品：' + target.title : '平面工坊：一句话 AI 出海报',
       path: '/pages/index/index',
       imageUrl: target ? target.displayPath : undefined
     }
@@ -172,7 +187,7 @@ Page({
 
   onShareTimeline() {
     return {
-      title: '海报工坊：AI 一键生成国风海报',
+      title: '平面工坊：一句话 AI 出海报',
       query: 'from=timeline'
     }
   }

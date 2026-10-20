@@ -1,18 +1,16 @@
 const app = getApp()
-const { BUILTIN_TEMPLATES } = require('../../utils/templates')
+const { listBuiltinTemplates, templateCoverPath } = require('../../utils/templates')
+const designTypes = require('../../utils/design-types')
 const repo = require('../../utils/repository')
-const thumbnail = require('../../utils/thumbnail')
-
-const THUMB_WIDTH = 80
-const THUMB_HEIGHT = 107
-// 缩略图按设计稿 750 宽等比缩放
-const THUMB_SCALE = THUMB_WIDTH / 750
 
 Page({
   data: {
     templates: [],
-    thumbWidth: THUMB_WIDTH,
-    thumbHeight: THUMB_HEIGHT
+    types: [],
+    // 只剩一类物料时不渲染筛选条，之后再开门类会自动出现
+    showTypeBar: false,
+    typeKey: designTypes.DEFAULT_TYPE_KEY,
+    typeName: ''
   },
 
   /** 把内联提示条实例登记到 app，错误提示就能显示在页面内 */
@@ -20,33 +18,55 @@ Page({
     app.registerNotice(event.detail.notice)
   },
 
-  onReady() {
-    this.pendingRender = true
-  },
-
   onShow() {
+    this.syncType()
     this.loadTemplates()
   },
 
   onPullDownRefresh() {
+    this.syncType()
     this.loadTemplates().then(() => wx.stopPullDownRefresh())
   },
 
+  /** 物料类型筛选：与首页共用同一份选择，默认海报 */
+  syncType() {
+    const type = designTypes.currentDesignType()
+    const types = designTypes.typeOptions(type.key)
+    this.setData({
+      types: types,
+      showTypeBar: types.length > 1,
+      typeKey: type.key,
+      typeName: type.name
+    })
+  },
+
+  switchType(event) {
+    const key = event.currentTarget.dataset.key
+    designTypes.setCurrentDesignType(key)
+    this.syncType()
+    this.loadTemplates()
+  },
+
   loadTemplates() {
-    // 每次重建模板表，设计稿缓存也要重置，否则下标会与旧列表错位
-    this.designList = []
-    const builtin = BUILTIN_TEMPLATES.map((item) => this.mapRow(item, 'builtin'))
-    return repo.listTemplates()
+    const typeKey = this.data.typeKey
+    const builtin = listBuiltinTemplates(typeKey).map((item) => this.mapRow(item, 'builtin'))
+    return repo
+      .listTemplates()
       .then((rows) => {
         const cloudRows = rows
           .filter((row) => row.is_builtin !== true)
+          .filter(
+            (row) =>
+              typeKey === 'all' ||
+              ((row.layers && row.layers.designType) || designTypes.DEFAULT_TYPE_KEY) === typeKey
+          )
           .map((row) =>
             this.mapRow(
               {
                 key: 'cloud_' + row.id,
                 id: row.id,
                 name: row.name,
-                description: row.description,
+                type: row.layers && row.layers.designType,
                 background: (row.layers && row.layers.background) || {},
                 layers: (row.layers && row.layers.layers) || []
               },
@@ -54,87 +74,91 @@ Page({
             )
           )
         const all = builtin.concat(cloudRows)
-        this.setData({ templates: all }, () => this.renderThumbnails())
+        this.setData({ templates: all })
+        // 云端模板的底图是 storagePath，要换成签名链接才能显示
+        cloudRows.forEach((row) => this.loadCover(row.key, row.coverPath))
         return all
       })
       .catch(() => {
-        this.setData({ templates: builtin }, () => this.renderThumbnails())
+        this.setData({ templates: builtin })
         return builtin
       })
   },
 
+  /**
+   * 模板 = 一张做好的图，与素材库里的图是同一种东西。
+   * 所以列表项只剩「底图 + 来源」，不再统计文字层与贴图层——
+   * 那些是 canvas 时代的产物，现在换字换贴图全在提示词里说。
+   */
   mapRow(template, source) {
-    const design = { background: template.background || {}, layers: template.layers || [] }
-    const stat = thumbnail.describeLayers(design.layers)
-    // 设计稿不进 setData：图层数组大，视图层不需要它，序列化既慢又可能带进不可传输的值
-    this.designList = this.designList || []
-    this.designList.push(design)
+    const coverPath = templateCoverPath(template)
     return {
       key: template.key,
       id: template.id,
       name: template.name,
-      description: template.description || '多图层画板模板',
       source: source,
-      layerCount: stat.total,
-      stat: stat,
-      summary: thumbnail.layerSummary(design.layers)
+      // 内置模板是本地路径可直接显示；云端模板要等 loadCover 换签名链接
+      cover: source === 'builtin' ? coverPath : '',
+      coverPath: coverPath
     }
   },
 
-  /**
-   * 批量取所有缩略图画布并逐个渲染真实版式。
-   * selectAll 返回顺序与 wx:for 一致，因此下标能对上。
-   */
-  renderThumbnails() {
-    const list = this.data.templates
-    const designs = this.designList || []
-    if (!list.length) return
-    wx.createSelectorQuery()
-      .selectAll('.tpl-canvas')
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        const nodes = (res && res[0]) || []
-        if (!nodes.length) {
-          // 画布尚未挂载，等下一帧补渲染
-          this.pendingRender = true
-          return
-        }
-        this.pendingRender = false
-        nodes.forEach((item, index) => {
-          const design = designs[index]
-          if (!item || !item.node || !design) return
-          const canvas = item.node
-          // 绘图缓冲区按 DPR 放大，否则缩略图发虚
-          const dpr = (wx.getWindowInfo && wx.getWindowInfo().pixelRatio) || 2
-          canvas.width = THUMB_WIDTH * dpr
-          canvas.height = THUMB_HEIGHT * dpr
-          thumbnail
-            .renderThumbnail(canvas, design, { scale: THUMB_SCALE * dpr })
-            .catch(() => {})
+  loadCover(key, coverPath) {
+    if (!coverPath) return
+    repo
+      .resolveImage(coverPath)
+      .then((tempPath) => {
+        if (!tempPath) return
+        this.setData({
+          templates: this.data.templates.map((row) =>
+            row.key === key ? Object.assign({}, row, { cover: tempPath }) : row
+          )
         })
       })
+      .catch(() => {})
   },
 
-  /** 数据先到、画布后挂载时补一次渲染 */
-  onPageScroll() {
-    if (!this.pendingRender || !this.data.templates.length) return
-    this.renderThumbnails()
-  },
-
+  /** 点图直接进创作页：模板底图作参考图，提示词里说清要换成什么 */
   useTemplate(event) {
     const key = event.currentTarget.dataset.key
-    wx.navigateTo({ url: '/pages/editor/editor?templateKey=' + key })
+    const target = this.data.templates.find((item) => item.key === key)
+    if (!target || !target.cover) {
+      app.toast('这张图还没加载好')
+      return
+    }
+    wx.navigateTo({
+      url:
+        '/pages/create/create?mode=template&templateKey=' +
+        encodeURIComponent(key) +
+        '&templateName=' +
+        encodeURIComponent(target.name || '')
+    })
+  },
+
+  /** 长按看大图，与素材库的交互一致 */
+  preview(event) {
+    const key = event.currentTarget.dataset.key
+    const target = this.data.templates.find((item) => item.key === key)
+    if (!target || !target.cover) return
+    const urls = this.data.templates.map((item) => item.cover).filter(Boolean)
+    wx.previewImage({ current: target.cover, urls: urls })
   },
 
   remove(event) {
     const id = event.currentTarget.dataset.id
+    // 删除是写操作：游客态直接跳登录界面，不发起注定失败的请求
+    if (!app.canWrite()) {
+      app.goLogin('删除模板需要登录')
+      return
+    }
     wx.showModal({
       title: '删除模板',
       content: '删除后无法恢复，确定删除吗？',
       confirmColor: '#8a6a3b',
       success: (res) => {
         if (!res.confirm) return
-        repo.deleteTemplate(id)
+        repo
+          .deleteTemplate(id)
           .then((removed) => {
             if (!removed) {
               app.toast('该模板不存在或不属于你')
@@ -148,13 +172,14 @@ Page({
     })
   },
 
-  goEditor() {
-    wx.navigateTo({ url: '/pages/editor/editor?blank=1' })
+  /** 自己从零来一张：不套模板，直接上传底图做拼贴 */
+  goCreate() {
+    wx.navigateTo({ url: '/pages/create/create?mode=collage' })
   },
 
   onShareAppMessage() {
     return {
-      title: '海报工坊：多图层画板模板，改字换图即可复用',
+      title: '平面工坊：挑张图，换字换元素 AI 直接出海报',
       path: '/pages/templates/templates'
     }
   }

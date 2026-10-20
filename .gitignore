@@ -1,0 +1,8 @@
+node_modules/
+miniprogram_npm/
+project.private.config.json
+.DS_Store
+
+# 云服务本地产物（含应用私钥与隐私声明缓存）
+*.genie
+*.privacy.json

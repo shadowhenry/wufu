@@ -26,13 +26,39 @@ async function insertMaterial(row) {
   return data && data[0]
 }
 
-async function deleteMaterial(id) {
+/**
+ * 尽力清理云存储中的孤儿文件。
+ *
+ * 注意：SDK 的 storage.remove 走的是**前缀批量删除**（请求体为
+ * `{ prefixes: [...] }`），传单个精确路径会连带删除同前缀下的所有文件——
+ * 同一用户的整个 materials/ 目录都会被清空。
+ *
+ * 因此这里不做文件删除。残留文件只是占用存储配额，不影响功能正确性；
+ * 贸然清理的风险（误删他人素材）远大于收益。真正的清理应在云端做生命周期规则。
+ */
+function noteOrphanFile(objectPath) {
+  if (!objectPath) return
+  // 仅记录，不执行删除。调试时可在控制台查看孤儿文件分布。
+  if (typeof console !== 'undefined' && console.debug) {
+    console.debug('[repository] 记录已删除，对应存储对象可由云端生命周期规则回收:', objectPath)
+  }
+}
+
+/**
+ * 删除素材记录。
+ * @param {*} id 素材 id
+ * @param {string} [objectPath] 该素材的存储路径，仅用于诊断记录
+ */
+async function deleteMaterial(id, objectPath) {
   const { data, error } = await cloud.database
     .from('poster_materials')
     .delete()
     .eq('id', id)
     .select()
   if (error) throw new Error(describeError(error, '素材删除失败'))
+  if ((data || []).length > 0 && objectPath) {
+    noteOrphanFile(objectPath)
+  }
   return (data || []).length > 0
 }
 
@@ -99,13 +125,19 @@ async function insertRecord(row) {
   return data && data[0]
 }
 
-async function deleteRecord(id) {
+/**
+ * 删除历史记录。imagePath 仅用于诊断记录，不做文件删除（理由同 noteOrphanFile）。
+ */
+async function deleteRecord(id, imagePath) {
   const { data, error } = await cloud.database
     .from('poster_records')
     .delete()
     .eq('id', id)
     .select()
   if (error) throw new Error(describeError(error, '记录删除失败'))
+  if ((data || []).length > 0 && imagePath) {
+    noteOrphanFile(imagePath)
+  }
   return (data || []).length > 0
 }
 
@@ -128,16 +160,26 @@ function readArrayBuffer(filePath) {
   })
 }
 
-function base64ToArrayBuffer(base64) {
-  if (typeof wx.base64ToArrayBuffer === 'function') {
-    return wx.base64ToArrayBuffer(base64)
-  }
-  const cleaned = String(base64).replace(/^data:[^;]+;base64,/, '')
-  const binary = atob(cleaned)
-  const buffer = new ArrayBuffer(binary.length)
-  const view = new Uint8Array(buffer)
-  for (let i = 0; i < binary.length; i += 1) view[i] = binary.charCodeAt(i)
-  return buffer
+/**
+ * base64 落盘为本地临时文件。
+ *
+ * 不在 JS 堆里把 base64 展开成 ArrayBuffer——那样峰值内存会同时持有
+ * base64 字符串 + 二进制字符串 + ArrayBuffer，一张 5MB 的图能吃掉 17MB，
+ * 小程序堆上限本就吃紧。交给文件系统解码，堆里只留原始 base64。
+ */
+function base64ToTempFile(base64, extension) {
+  const suffix = extension || 'png'
+  const filePath = wx.env.USER_DATA_PATH + '/upload_' + Date.now() + '.' + suffix
+  const data = String(base64).replace(/^data:image\/[a-zA-Z]+;base64,/, '')
+  return new Promise((resolve, reject) => {
+    wx.getFileSystemManager().writeFile({
+      filePath: filePath,
+      data: data,
+      encoding: 'base64',
+      success: () => resolve(filePath),
+      fail: () => reject(new Error('图片写入临时文件失败'))
+    })
+  })
 }
 
 async function uploadLocalFile(uid, folder, filePath, contentType) {
@@ -153,14 +195,17 @@ async function uploadLocalFile(uid, folder, filePath, contentType) {
 }
 
 async function uploadBase64(uid, folder, base64, contentType) {
-  const objectPath = buildObjectPath(uid, folder, 'png')
-  const body = base64ToArrayBuffer(base64)
-  const { error } = await cloud.storage.upload(objectPath, body, {
-    contentType: contentType || 'image/png',
-    upsert: false
-  })
-  if (error) throw new Error(describeError(error, '文件上传失败'))
-  return objectPath
+  const tempPath = await base64ToTempFile(base64, 'png')
+  try {
+    return await uploadLocalFile(uid, folder, tempPath, contentType || 'image/png')
+  } finally {
+    // 临时文件用完即删，避免占满用户存储配额
+    try {
+      wx.getFileSystemManager().unlink({ filePath: tempPath, fail: () => {} })
+    } catch (error) {
+      // 清理失败不影响主流程
+    }
+  }
 }
 
 /** 把对象路径换成可展示的签名链接，并交给 wx.downloadFile 落地成本地临时文件 */

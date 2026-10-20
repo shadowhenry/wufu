@@ -1,19 +1,19 @@
 <view class="page">
   <inline-notice id="notice" bind:ready="onNoticeReady" />
   <view wx:if="{{!signedIn}}" class="gate">
-    <view class="gate-title">登录后查看历史记录</view>
-    <view class="gate-desc">这里存放你最终保存下来的海报，换设备也能继续编辑。</view>
+    <view class="gate-title">登录后查看我的作品</view>
+    <view class="gate-desc">这里存放你保存下来的成品图，换设备也能继续查看。</view>
     <view class="btn-primary gate-btn" bindtap="signIn">微信一键登录</view>
   </view>
 
   <view wx:elif="{{loading}}" class="empty">加载中…</view>
 
   <view wx:elif="{{!items.length}}" class="empty">
-    <view class="empty-main">还没有保存过海报</view>
+    <view class="empty-main">还没有保存过作品</view>
     <view class="btn-primary empty-btn" bindtap="goTemplates">去挑一个模板</view>
   </view>
 
-  <!-- 海报图列表：图为主体，标题时间压在图上，操作收在图下 -->
+  <!-- 成品图列表：图为主体，标题时间压在图上，操作收在图下 -->
   <view wx:else class="grid">
     <view class="cell" wx:for="{{items}}" wx:key="id">
       <view class="poster" data-id="{{item.id}}" bindtap="openDetail">
@@ -28,7 +28,7 @@
       </view>
 
       <view class="cell-ops">
-        <view class="op" data-id="{{item.id}}" catchtap="openDetail">编辑</view>
+        <view class="op" data-id="{{item.id}}" catchtap="openDetail">看大图</view>
         <button
           wx:if="{{item.displayPath}}"
           class="op primary share-btn"

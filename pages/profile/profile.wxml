@@ -12,7 +12,7 @@
   <view class="stats">
     <view class="stat">
       <view class="stat-num">{{stats.posters}}</view>
-      <view class="stat-label">生成海报</view>
+      <view class="stat-label">我的作品</view>
     </view>
     <view class="stat">
       <view class="stat-num">{{stats.templates}}</view>
@@ -22,6 +22,12 @@
       <view class="stat-num">{{stats.materials}}</view>
       <view class="stat-label">我的素材</view>
     </view>
+  </view>
+
+  <view wx:if="{{!signedIn}}" class="guest-note">
+    <view class="guest-note-title">当前为浏览模式</view>
+    <view class="guest-note-line">素材库、模板库与编辑器无需登录即可使用</view>
+    <view class="guest-note-line">登录后可保存素材、留存模板、归档作品并分享</view>
   </view>
 
   <view class="section-title">创作入口</view>
@@ -46,9 +52,9 @@
 
   <view class="section-title">关于</view>
   <view class="about">
-    <view class="about-line">海报工坊 · 云原生小程序</view>
+    <view class="about-line">平面工坊 · 云原生小程序</view>
     <view class="about-line">素材、模板与历史记录保存在云端，AI 能力由平台提供。</view>
-    <view class="about-line" wx:if="{{!signedIn}}">登录后才能保存海报、素材和模板。</view>
+    <view class="about-line" wx:if="{{!signedIn}}">不登录也能把做好的图存进相册；登录后才能存到云端作品库。</view>
   </view>
 
   <view wx:if="{{signedIn}}" class="signout" bindtap="signOut">退出登录</view>

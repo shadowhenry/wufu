@@ -1,0 +1,10 @@
+<view class="page">
+  <inline-notice id="notice" bind:ready="onNoticeReady" />
+  <view class="login-box">
+    <view class="login-icon">🔐</view>
+    <view class="login-title">登录后即可使用完整功能</view>
+    <view class="login-desc">保存作品、上传素材、管理模板需要微信授权登录</view>
+    <view class="login-btn" bindtap="onLogin">微信一键登录</view>
+    <view wx:if="{{reason}}" class="login-reason">{{reason}}</view>
+  </view>
+</view>

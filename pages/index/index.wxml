@@ -1,34 +1,60 @@
 <view class="page">
   <inline-notice id="notice" bind:ready="onNoticeReady" />
   <view class="hero">
-    <view class="hero-title">海报工坊</view>
-    <view class="hero-sub">选素材 · 选模板 · AI 创作 · 一键分享</view>
+    <view class="hero-top">
+      <view class="hero-brand">
+        <view class="hero-title">平面工坊</view>
+        <view class="hero-sub">AI 图生图 · 一键出海报</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 物料类型 3D 轮播：卡片大小一致，两侧轻微后退；可循环切换。
+       只开放海报一类时不渲染，避免孤零零一张卡片 -->
+  <view class="type-stage" wx:if="{{showTypeStage}}">
+    <view
+      class="type-track"
+      bindtouchstart="onTypeTouchStart"
+      bindtouchend="onTypeTouchEnd"
+    >
+      <view
+        class="type-card {{item.active ? 'is-active' : ''}}"
+        wx:for="{{typeCards}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="switchType"
+        style="transform: translateX({{item.tx}}rpx) translateZ({{item.tz}}rpx) rotateY({{item.ry}}deg) scale({{item.sc}}); z-index: {{item.z}}; opacity: {{item.op}};"
+      >
+        <view class="type-name">{{item.name}}</view>
+        <view wx:if="{{item.active}}" class="type-spec">{{item.spec}}</view>
+      </view>
+    </view>
   </view>
 
   <view class="quick-grid">
     <view class="quick-card" bindtap="goMaterials">
       <view class="quick-icon">素</view>
       <view class="quick-name">选素材</view>
-      <view class="quick-desc">风景山水人文</view>
+      <view class="quick-desc">挑图后 AI 生成</view>
     </view>
     <view class="quick-card" bindtap="goTemplates">
       <view class="quick-icon">模</view>
       <view class="quick-name">选模板</view>
-      <view class="quick-desc">改字换图复用</view>
+      <view class="quick-desc">套版式重新出图</view>
     </view>
     <view class="quick-card" bindtap="goBlank">
       <view class="quick-icon">拼</view>
       <view class="quick-name">自由拼贴</view>
-      <view class="quick-desc">贴纸文字多图拼接</view>
+      <view class="quick-desc">上传图 + 提示词</view>
     </view>
     <view class="quick-card" bindtap="goAi">
       <view class="quick-icon">AI</view>
       <view class="quick-name">AI 创作</view>
-      <view class="quick-desc">文生图直接用</view>
+      <view class="quick-desc">一句话直接出图</view>
     </view>
   </view>
 
-  <view class="section-title">最近使用的模板</view>
+  <view class="section-title">{{signedIn ? '最近使用的' : '推荐'}}{{typeName}}模板</view>
   <view wx:if="{{templates.length}}" class="tpl-grid">
     <view
       class="tpl-card"
@@ -41,9 +67,12 @@
       <view class="tpl-desc">{{item.description}}</view>
     </view>
   </view>
-  <view wx:else class="empty">还没有使用记录，去模板库挑一个吧</view>
-
-  <view class="section-title">最近生成</view>
+  <view wx:else class="empty">这一类还没有模板，去模板库挑一个吧</view>
+  <view class="section-head">
+    <view class="section-title">最近生成</view>
+    <!-- 登录后才显示「我的」入口：游客的登录入口在下方空状态里 -->
+    <view wx:if="{{signedIn}}" class="section-link" bindtap="goProfile">我的</view>
+  </view>
   <view wx:if="{{recent.length}}" class="recent-grid">
     <view class="recent-item" wx:for="{{recent}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecord">
       <view class="recent-poster">
@@ -57,5 +86,24 @@
     </view>
   </view>
   <view wx:elif="{{recentLoading}}" class="empty">加载中…</view>
-  <view wx:else class="empty">还没有生成过海报，去模板里挑一个吧</view>
+  <view wx:elif="{{signedIn}}" class="empty">还没有生成过作品，去模板里挑一个吧</view>
+  <!-- 游客且没有任何保存记录：直接给登录按钮 -->
+  <view wx:else class="empty empty-gate">
+    <view class="empty-main">登录后可在这里看到你保存过的作品</view>
+    <view class="btn-primary gate-btn" bindtap="signIn">微信一键登录</view>
+  </view>
+
+  <!-- 底部弹起的登录授权框：出图全靠 AI，进来先把身份确认掉 -->
+  <view wx:if="{{showLoginGate}}" class="login-mask" catchtouchmove="noop">
+    <view class="login-sheet">
+      <view class="sheet-grip"></view>
+      <view class="sheet-title">登录后开始创作</view>
+      <view class="sheet-desc">出图全部由 AI 完成，需要你的微信身份来保存作品。</view>
+      <view class="sheet-desc sheet-desc-sub">先逛素材库和模板库没关系，开始设计时会再请你登录。</view>
+      <view class="btn-primary sheet-btn {{signingIn ? 'disabled' : ''}}" bindtap="signInFromGate">
+        {{signingIn ? '登录中…' : '微信一键登录'}}
+      </view>
+      <view class="sheet-later" bindtap="closeLoginGate">稍后再说</view>
+    </view>
+  </view>
 </view>

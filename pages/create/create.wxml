@@ -1,0 +1,118 @@
+<view class="page">
+  <inline-notice id="notice" bind:ready="onNoticeReady" />
+
+  <view class="mode-head">
+    <view class="mode-title">{{modeTitle}}</view>
+    <view class="mode-hint">{{modeHint}}</view>
+  </view>
+
+  <!-- 底图：作为参考图交给 AI。区域内不放任何文字——
+       图里自带什么字就是什么字，右下角只留一个「更换」。
+       创作区大小固定不变（不随出图尺寸变），图片按自身比例自适应，
+       铺不满的那条边会溢出，上下左右拖动即可看全图。 -->
+  <view wx:if="{{requireReference}}" class="block">
+    <view wx:if="{{reference.path}}" class="ref-stage">
+      <scroll-view class="ref-scroll" scroll-x="{{true}}" scroll-y="{{true}}">
+        <view class="ref-canvas" style="{{refW ? 'width:' + refW + ';height:' + refH : ''}}">
+          <image
+            class="ref-thumb"
+            src="{{reference.path}}"
+            mode="aspectFit"
+            bindload="onRefLoad"
+            bindtap="previewReference"
+          />
+        </view>
+      </scroll-view>
+      <view class="ref-clear" catchtap="pickReference">更换</view>
+    </view>
+    <view wx:else class="ref-picker" bindtap="pickReference">
+      <view class="ref-plus">+</view>
+    </view>
+  </view>
+
+  <!-- 贴图：一次可以选多张，不需要任何文字说明 -->
+  <view wx:if="{{showArtwork}}" class="block">
+    <view class="field-label">贴图（选填，最多 {{artworkLimit}} 张）</view>
+    <view class="art-grid">
+      <view class="art-cell" wx:for="{{artworks}}" wx:key="key">
+        <image
+          class="art-thumb"
+          src="{{item.path}}"
+          mode="aspectFill"
+          data-index="{{index}}"
+          bindtap="previewArtwork"
+        />
+        <view class="art-del" data-index="{{index}}" catchtap="removeArtwork">×</view>
+      </view>
+      <view wx:if="{{artworks.length < artworkLimit}}" class="art-cell art-add" bindtap="chooseArtworks">
+        <text class="art-plus">+</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 出图尺寸：原尺寸=跟随参考图，其余按选定比例构图 -->
+  <view class="block">
+    <view class="field-label">出图尺寸</view>
+    <view class="size-row">
+      <view
+        class="size-chip {{item.active ? 'is-active' : ''}}"
+        wx:for="{{sizes}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="chooseSize"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="block">
+    <view class="field-label">提示词</view>
+    <textarea
+      class="input"
+      value="{{input}}"
+      bindinput="onInput"
+      placeholder="{{inputPlaceholder}}"
+      auto-height
+      maxlength="500"
+    />
+  </view>
+
+  <view wx:if="{{streamText}}" class="preview-box">
+    <view class="preview-title">AI 优化后的提示词</view>
+    <view class="preview-text">{{streamText}}</view>
+  </view>
+
+  <view class="actions">
+    <view class="btn-primary {{generating ? 'disabled' : ''}}" bindtap="generate">{{generating ? '生成中…' : '开始生成'}}</view>
+  </view>
+
+  <view wx:if="{{results.length}}" class="results">
+    <view class="result-item" wx:for="{{results}}" wx:key="path">
+      <image
+        class="result-img"
+        src="{{item.path}}"
+        mode="widthFix"
+        data-index="{{index}}"
+        bindtap="previewResult"
+      />
+      <view class="result-ops">
+        <view class="result-op {{item.savedRecord ? 'done' : ''}}" data-index="{{index}}" bindtap="saveToRecord">
+          {{item.savedRecord ? '已在作品' : '保存到作品'}}
+        </view>
+        <view class="result-op {{item.savedTemplate ? 'done' : ''}}" data-index="{{index}}" bindtap="saveToTemplate">
+          {{item.savedTemplate ? '已在模板' : '存为模板'}}
+        </view>
+        <view class="result-op {{item.savedMaterial ? 'done' : ''}}" data-index="{{index}}" bindtap="saveToMaterial">
+          {{item.savedMaterial ? '已在素材' : '存为素材'}}
+        </view>
+        <view class="result-op" data-index="{{index}}" bindtap="continueEdit">继续修改</view>
+        <view class="result-op" data-index="{{index}}" bindtap="saveToAlbum">存到相册</view>
+        <button
+          class="result-op share"
+          open-type="share"
+          data-index="{{index}}"
+          data-path="{{item.path}}"
+        >分享</button>
+      </view>
+    </view>
+  </view>
+</view>

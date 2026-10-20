@@ -1,9 +1,9 @@
 {
   "miniprogramRoot": "./",
   "compileType": "miniprogram",
-  "appid": "",
+  "appid": "wx4f18ac26f385aa8f",
   "projectname": "poster-studio",
-  "description": "海报工坊 - 素材库 / 模板库 / AI 生成 / 历史记录",
+  "description": "平面工坊 - 素材库 / 模板库 / AI 生成 / 我的作品",
   "setting": {
     "urlCheck": false,
     "es6": true,
@@ -15,14 +15,45 @@
       "ignore": [],
       "disablePlugins": [],
       "outputPath": ""
-    }
+    },
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false
   },
   "packOptions": {
     "ignore": [
-      { "type": "folder", "value": ".tmp-materials" },
-      { "type": "folder", "value": "tests" }
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": ".tmp-materials",
+        "type": "folder"
+      },
+      {
+        "value": "tests",
+        "type": "folder"
+      },
+      {
+        "value": ".git",
+        "type": "folder"
+      },
+      {
+        "value": ".workbuddy",
+        "type": "folder"
+      }
     ],
     "include": []
   },
-  "condition": {}
+  "condition": {},
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
 }
