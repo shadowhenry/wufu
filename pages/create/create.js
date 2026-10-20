@@ -5,6 +5,7 @@ const album = require('../../utils/album')
 const upload = require('../../utils/upload')
 const designTypes = require('../../utils/design-types')
 const { findBuiltinTemplate, templateCoverPath } = require('../../utils/templates')
+const { findBuiltinMaterial } = require('../../utils/materials')
 
 /**
  * 四种创作模式。
@@ -152,7 +153,17 @@ Page({
 
   /** 把内联提示条实例登记到 app，错误提示就能显示在页面内 */
   onNoticeReady(event) {
-    app.registerNotice(event.detail.notice)
+    this.notice = event.detail.notice
+    app.registerNotice(this.notice)
+  },
+
+  onShow() {
+    // 从登录页等返回时重新登记，否则本页的提示会打到已被遮住的页面上
+    if (this.notice) app.registerNotice(this.notice)
+  },
+
+  onHide() {
+    app.releaseNotice()
   },
 
   onLoad(options) {
@@ -218,38 +229,61 @@ Page({
     }
   },
 
+  /**
+   * 素材入口：上游只给一个稳定 key（内置素材 = 素材 key，云端素材 = cloud_<id>）。
+   *
+   * 以前素材页把本地路径（/assets/...）拼在 URL 里传过来，参数在传递中丢掉，
+   * 创作页就只能静默留一个空操作区。改成 key 之后，内置素材的路径由本页按 key
+   * 自己查，不再依赖上游传参；云端素材按 id 查一次存储路径即可。
+   */
   applyMaterialSeed(query) {
-    // URL 参数是主通道，全局兜底只在参数丢失时补位（例如含斜杠的本地路径
-    // 在传递中被吞掉）。取到即用掉，避免下次进页误用上一张图。
+    // 全局兜底只在 URL 参数丢失时补位，取到即用掉，避免下次进页误用上一张图
     const pending = (app.globalData && app.globalData.pendingMaterial) || null
     const name = query.name || (pending && pending.name) || '素材图'
-    const seed = {
-      path: query.path || (pending && pending.path) || '',
-      name: name,
-      storagePath: query.storagePath || (pending && pending.storagePath) || ''
-    }
-    if ((seed.path || seed.storagePath) && app.globalData) {
-      app.globalData.pendingMaterial = null
-    }
-    // 两种路径都空说明上游没把图带过来。以前这里静默返回，用户只看到一个空的
-    // 选图框，根本不知道发生了什么——现在明确说出来。
-    if (!seed.path && !seed.storagePath) {
+    const key = query.materialKey || (pending && pending.key) || ''
+    const directPath = query.path || (pending && pending.path) || ''
+    const storagePath = query.storagePath || (pending && pending.storagePath) || ''
+    console.info(
+      '[create] material seed',
+      JSON.stringify({ key: key, path: directPath, storagePath: storagePath })
+    )
+    // 三种来源都空说明上游没把图带过来：明确说出来，别让用户对着空框猜
+    if (!key && !directPath && !storagePath) {
       app.toast('没有取到这张素材，请回素材库重新点一次')
       return
     }
-    if (seed.path) {
-      this.applyReference(seed)
+    if (app.globalData) app.globalData.pendingMaterial = null
+
+    const builtin = findBuiltinMaterial(key)
+    if (builtin) {
+      this.applyReference({ path: builtin.path, name: builtin.name || name })
       return
     }
-    // 云端素材只带存储路径，要先换成可展示的临时文件
-    repo
-      .resolveImage(seed.storagePath)
-      .then((tempPath) => {
-        if (!tempPath) {
-          app.toast('素材图读取为空，请回素材库重试')
+    if (directPath) {
+      this.applyReference({ path: directPath, name: name })
+      return
+    }
+    // 云端素材：先按 id 查到存储路径，再换成可展示的临时文件
+    const id = key.indexOf('cloud_') === 0 ? key.slice('cloud_'.length) : ''
+    const findPath = id
+      ? repo.listMaterials().then((rows) => {
+          const row = (rows || []).find((item) => String(item.id) === String(id))
+          return row ? row.storage_path : ''
+        })
+      : Promise.resolve(storagePath)
+    findPath
+      .then((objectPath) => {
+        if (!objectPath) {
+          app.toast('这张素材没有可显示的图，请回素材库重试')
           return
         }
-        this.applyReference({ path: tempPath, name: name, storagePath: seed.storagePath })
+        return repo.resolveImage(objectPath).then((tempPath) => {
+          if (!tempPath) {
+            app.toast('素材图读取为空，请回素材库重试')
+            return
+          }
+          this.applyReference({ path: tempPath, name: name, storagePath: objectPath })
+        })
       })
       .catch((error) => app.reportError(error, '素材读取失败'))
   },

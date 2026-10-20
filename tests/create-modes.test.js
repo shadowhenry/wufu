@@ -99,9 +99,10 @@ const resolvedImages = {}
 const recordCalls = []
 const templateCalls = []
 const uploadCalls = []
+let materialRows = []
 const fakeRepo = {
   listTemplates: () => Promise.resolve([]),
-  listMaterials: () => Promise.resolve([]),
+  listMaterials: () => Promise.resolve(materialRows),
   resolveImage: (storagePath) => Promise.resolve(resolvedImages[storagePath] || '/tmp/cloud.png'),
   uploadBase64: () => Promise.resolve('users/u1/materials/x.png'),
   uploadLocalFile: () => Promise.resolve('users/u1/materials/upload.png'),
@@ -211,6 +212,37 @@ test('云端素材的 storagePath 先换成可展示的临时文件', async func
   page.onLoad({ mode: 'material', name: 'AI 素材', storagePath: 'users/u1/materials/9.png' })
   await flush()
   assert.strictEqual(page.data.reference.path, '/tmp/cloud.png')
+})
+
+test('内置素材按 key 自己还原本地路径，不依赖上游传参', function () {
+  const page = createPage()
+  page.onLoad({ mode: 'material', materialKey: 'shanshui_1' })
+  assert.strictEqual(page.data.reference.path, '/assets/materials/shanshui_1.jpg')
+  assert.strictEqual(page.data.reference.name, '远山孤舟')
+})
+
+test('云端素材按 cloud_<id> 查存储路径再换临时文件', async function () {
+  materialRows = [{ id: 9, name: 'AI 素材', storage_path: 'users/u1/materials/9.png' }]
+  const page = createPage()
+  page.onLoad({ mode: 'material', materialKey: 'cloud_9' })
+  await flushAll()
+  assert.strictEqual(page.data.reference.path, '/tmp/cloud.png', '云端素材未换成可展示文件')
+  assert.strictEqual(page.data.reference.storagePath, 'users/u1/materials/9.png')
+  materialRows = []
+})
+
+test('全局兜底带 key 时同样能取回底图', function () {
+  const app = global.getApp()
+  app.globalData.pendingMaterial = {
+    key: 'fengjing_1',
+    path: '',
+    storagePath: '',
+    name: '青绿层峦'
+  }
+  const page = createPage()
+  page.onLoad({ mode: 'material' })
+  assert.strictEqual(page.data.reference.path, '/assets/materials/fengjing_1.jpg')
+  assert.strictEqual(app.globalData.pendingMaterial, null, '兜底用完要清掉，避免下次误用')
 })
 
 test('URL 参数丢失时用全局兜底把素材图取回来', function () {

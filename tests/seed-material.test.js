@@ -1,8 +1,10 @@
 /**
- * 素材页「用这张创作」→ 创作页消费的交接链路测试。
+ * 素材页「点这张图创作」→ 创作页消费的交接链路测试。
  *
- * 关注点：底图来源只能带一个（内置带 path、云端带 storagePath），
- * 且交接走 URL query 而不是 storage——走 storage 会在返回时二次生效，
+ * 关注点：交接只带一个稳定 key（内置 = 素材 key，云端 = cloud_<id>），
+ * 与模板页传 templateKey 的做法一致。本地路径（/assets/...）不再拼进 URL——
+ * 含斜杠的参数在页面间传递时会被吞掉，创作页只能看到一个空的创作区。
+ * 交接走 URL query 而不是 storage：走 storage 会在返回时二次生效，
  * 把用户已经换掉的底图又覆盖回去。
  *
  * 运行：node tests/seed-material.test.js
@@ -15,13 +17,18 @@ const root = path.join(__dirname, '..')
 const materialsSource = fs.readFileSync(path.join(root, 'pages/materials/materials.js'), 'utf8')
 const materialsWxml = fs.readFileSync(path.join(root, 'pages/materials/materials.wxml'), 'utf8')
 const createSource = fs.readFileSync(path.join(root, 'pages/create/create.js'), 'utf8')
+const { BUILTIN_MATERIALS, findBuiltinMaterial } = require(path.join(root, 'utils/materials'))
 
-/** 与 create.applyMaterialSeed 同构的替身：把 query 还原成底图 */
+/** 与 create.applyMaterialSeed 同构的替身：把 key 还原成底图 */
 function applySeed(query) {
-  const seed = { path: query.path || '', name: query.name || '素材图' }
-  if (!seed.path && !query.storagePath) return null
-  if (seed.path) return seed
-  return { path: '', name: seed.name, storagePath: query.storagePath }
+  const key = query.materialKey || ''
+  const builtin = findBuiltinMaterial(key)
+  if (builtin) return { path: builtin.path, name: builtin.name }
+  if (query.path) return { path: query.path, name: query.name || '素材图' }
+  if (query.storagePath) {
+    return { path: '', name: query.name || '素材图', storagePath: query.storagePath }
+  }
+  return null
 }
 
 const tests = []
@@ -29,19 +36,31 @@ function test(name, fn) { tests.push({ name: name, fn: fn }) }
 
 // ---- 交接契约 ----
 
-test('内置素材带 path 参数', function () {
-  const out = applySeed({ name: '远山孤舟', path: '/assets/materials/shanshui_1.jpg' })
-  assert.deepStrictEqual(out, { path: '/assets/materials/shanshui_1.jpg', name: '远山孤舟' })
+test('内置素材只带 key，路径由创作页自己查', function () {
+  const first = BUILTIN_MATERIALS[0]
+  const out = applySeed({ materialKey: first.key })
+  assert.strictEqual(out.path, first.path, 'key 未还原成本地路径')
+  assert.strictEqual(out.name, first.name)
 })
 
-test('云端素材带 storagePath 参数，且不带空的 path', function () {
-  const out = applySeed({ name: 'AI 素材', storagePath: 'users/u1/materials/9.png' })
-  assert.strictEqual(out.storagePath, 'users/u1/materials/9.png')
-  assert.strictEqual(out.path, '', '不应带空的 path，否则会误判成本地资源')
+test('云端素材带 cloud_<id>，不带本地路径', function () {
+  const out = applySeed({ name: 'AI 素材', materialKey: 'cloud_9' })
+  assert.ok(!out, '云端 key 需要查库，替身阶段不产路径；创作页会按 id 查存储路径')
+  const fallback = applySeed({ name: 'AI 素材', storagePath: 'users/u1/materials/9.png' })
+  assert.strictEqual(fallback.storagePath, 'users/u1/materials/9.png')
+  assert.strictEqual(fallback.path, '', '不应带本地路径，否则会误判成随包资源')
 })
 
-test('两个来源都为空时不设底图', function () {
+test('既没有 key 也没有路径时不设底图', function () {
   assert.strictEqual(applySeed({ name: '坏数据' }), null)
+})
+
+test('每个内置素材都能按 key 找回', function () {
+  BUILTIN_MATERIALS.forEach((item) => {
+    assert.strictEqual(findBuiltinMaterial(item.key).path, item.path)
+  })
+  assert.strictEqual(findBuiltinMaterial(''), null)
+  assert.strictEqual(findBuiltinMaterial('cloud_9'), null)
 })
 
 // ---- 页面接线 ----
@@ -55,22 +74,26 @@ test('素材卡片点图即进创作页，且图下方没有文字', function ()
   assert.ok(/preview\(event\)/.test(materialsSource), '预览功能应保留')
 })
 
-test('useMaterial 直接把底图拼进创作页 URL', function () {
+test('useMaterial 只把 key 拼进创作页 URL', function () {
   const match = materialsSource.match(/useMaterial\(event\)\s*\{[\s\S]*?\n  \},\n/)
   assert.ok(match, '未找到 useMaterial 方法')
   const body = match[0]
   assert.ok(/mode=material/.test(body), '未带上素材创作模式')
   assert.ok(/\/pages\/create\/create\?/.test(body), '未跳转到创作页')
-  assert.ok(/storagePath=/.test(body) && /path=/.test(body), '底图的两种来源都要能传')
+  assert.ok(/materialKey=/.test(body), '未带素材 key')
+  // 本地路径带斜杠，拼进 URL 容易在传递中被吞掉，创作页只能看到空的操作区
+  assert.ok(!/[^i]path=/.test(body), '不应再拼本地路径或存储路径进 URL')
   // 改用 URL 传参后不再落 storage：否则返回本页再点一次会覆盖用户已换的底图
   assert.ok(!/setStorageSync/.test(body), '底图不应再落 storage')
 })
 
-test('创作页按 query 还原底图', function () {
+test('创作页按 key 还原底图', function () {
   assert.ok(/applyMaterialSeed\(/.test(createSource), '缺少 applyMaterialSeed')
   assert.ok(/resolveImage\(/.test(createSource), '云端素材未换成可展示的临时文件')
   const match = createSource.match(/applyMaterialSeed\(query\)\s*\{[\s\S]*?\n  \},\n/)
   assert.ok(match, '未找到 applyMaterialSeed 方法体')
+  assert.ok(/findBuiltinMaterial\(/.test(match[0]), '内置素材未按 key 自己还原路径')
+  assert.ok(/materialKey/.test(match[0]), '未读取素材 key')
   assert.ok(/mode === 'material'/.test(createSource), '素材模式未单独分支')
 })
 

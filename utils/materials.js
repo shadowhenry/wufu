@@ -72,4 +72,14 @@ function categoryLabel(key) {
   return hit ? hit.label : '其他'
 }
 
-module.exports = { CATEGORIES, BUILTIN_MATERIALS, categoryLabel }
+/**
+ * 按 key 取内置素材。
+ * 创作页据此自己还原本地路径，不必依赖上游把路径拼进 URL——
+ * 含斜杠的路径在页面间传递时容易被吞掉，交给 key 更稳。
+ */
+function findBuiltinMaterial(key) {
+  if (!key) return null
+  return BUILTIN_MATERIALS.find((item) => item.key === key) || null
+}
+
+module.exports = { CATEGORIES, BUILTIN_MATERIALS, categoryLabel, findBuiltinMaterial }

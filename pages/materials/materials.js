@@ -15,11 +15,18 @@ Page({
 
   /** 把内联提示条实例登记到 app，错误提示就能显示在页面内 */
   onNoticeReady(event) {
-    app.registerNotice(event.detail.notice)
+    this.notice = event.detail.notice
+    app.registerNotice(this.notice)
   },
 
   onShow() {
+    // 被新页面盖住时提示条已被释放，回来要重新登记，否则本页的提示会消失
+    if (this.notice) app.registerNotice(this.notice)
     this.loadMaterials()
+  },
+
+  onHide() {
+    app.releaseNotice()
   },
 
   switchCategory(event) {
@@ -86,30 +93,31 @@ Page({
    * 用户再加贴图与文字，交给 AI 图生图。
    * 免去「进创作页 → 再翻一遍素材库」这一圈。
    */
+  /**
+   * 拿当前素材直接开做：素材图作为底图进创作页。
+   *
+   * 交接只带一个稳定 key（内置素材 = 素材 key，云端素材 = cloud_<id>），
+   * 与模板页传 templateKey 的做法一致。以前把本地路径（/assets/...）拼进 URL，
+   * 参数在传递中丢掉就只剩一个空的创作区，而且从日志看不出是哪一步丢的。
+   */
   useMaterial(event) {
     const id = event.currentTarget.dataset.id
     const target = this.data.items.find((item) => String(item.id) === String(id))
     if (!target) return
-    // 内置素材带本地路径，云端素材带存储路径，创作页据此分别取图
     const builtin = target.source === 'builtin'
-    const value = builtin ? target.displayPath || '' : target.storagePath || ''
-    // 图还没取到就跳转，创作页只会拿到空底图（用户看到一个空的选图框）。
-    // 这里直接拦住并说明原因，比让用户在创作页对着空框猜要好。
-    if (!value) {
-      app.toast('这张图还在加载，稍等一下再点')
-      return
-    }
+    const key = builtin ? String(target.id) : 'cloud_' + target.id
     const query = [
       'mode=material',
-      'name=' + encodeURIComponent(target.name || '素材图'),
-      builtin ? 'path=' + encodeURIComponent(value) : 'storagePath=' + encodeURIComponent(value)
+      'materialKey=' + encodeURIComponent(key),
+      'name=' + encodeURIComponent(target.name || '素材图')
     ].join('&')
-    // 兜底：本地路径带斜杠，URL 参数万一在传递中丢了，创作页还能从这里取回图，
-    // 不至于只剩一个空的选图框。
+    // 兜底：URL 参数万一在传递中丢了，创作页还能从这里取回，
+    // 不至于只剩一个空的操作区。取到即用掉，避免下次误用上一张。
     if (app.globalData) {
       app.globalData.pendingMaterial = {
-        path: builtin ? value : '',
-        storagePath: builtin ? '' : value,
+        key: key,
+        path: builtin ? target.displayPath || '' : '',
+        storagePath: builtin ? '' : target.storagePath || '',
         name: target.name || '素材图'
       }
     }

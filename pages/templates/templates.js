@@ -15,12 +15,19 @@ Page({
 
   /** 把内联提示条实例登记到 app，错误提示就能显示在页面内 */
   onNoticeReady(event) {
-    app.registerNotice(event.detail.notice)
+    this.notice = event.detail.notice
+    app.registerNotice(this.notice)
   },
 
   onShow() {
+    // 从创作页返回时重新登记提示条，否则本页的提示会打到已被遮住的页面上
+    if (this.notice) app.registerNotice(this.notice)
     this.syncType()
     this.loadTemplates()
+  },
+
+  onHide() {
+    app.releaseNotice()
   },
 
   onPullDownRefresh() {

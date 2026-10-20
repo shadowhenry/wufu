@@ -141,9 +141,15 @@ App({
   /**
    * 把当前页面上的 inline-notice 组件实例登记上来，
    * 这样 reportError 不必逐页转发就能找到提示条。
+   * 登记时把等待中的提示补显示出来（页面 onLoad 阶段的提示会被暂存）。
    */
   registerNotice(component) {
     this.globalData.notice = component || null
+    const pending = this.globalData.pendingNotice
+    if (component && typeof component.show === 'function' && pending) {
+      this.globalData.pendingNotice = null
+      component.show(pending)
+    }
   },
 
   unregisterNotice(component) {
@@ -152,14 +158,27 @@ App({
     }
   },
 
+  /**
+   * 页面被新页面盖住时释放提示条。
+   * 不释放的话，新页面 onLoad 里的提示会打到这个看不见的旧页面上——
+   * 用户什么都没看到，问题却真实发生了（素材底图为空就是这么被藏住的）。
+   */
+  releaseNotice() {
+    this.globalData.notice = null
+  },
+
   /** 在页面内显示一条提示。找不到 notice 实例时退回 toast。 */
   showNotice(message, type, duration) {
+    const payload = { message: message, type: type || 'info', duration: duration }
     const notice = this.globalData.notice
     if (notice && typeof notice.show === 'function') {
-      notice.show({ message: message, type: type || 'info', duration: duration })
+      notice.show(payload)
       return
     }
-    wx.showToast({ title: message, icon: 'none', duration: (duration || 3200) - 1000 })
+    // 还没有可用的提示条：先存一份，等页面登记上来再补显示完整文案；
+    // 同时用系统 toast 兜底，保证用户当场就能看到一点反馈。
+    this.globalData.pendingNotice = payload
+    wx.showToast({ title: message, icon: 'none', duration: 2200 })
   },
 
   /**
