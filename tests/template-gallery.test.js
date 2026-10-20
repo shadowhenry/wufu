@@ -155,9 +155,10 @@ test('图生图时明确要求保留版式 + 按用户说法替换', function ()
 test('模板模式的提示词占位符教用户怎么换字换元素', function () {
   assert.ok(/inputPlaceholder/.test(createJs), '创作页未按模式切换占位符')
   const template = createJs.match(/template:\s*\{[\s\S]*?\n  \},/)[0]
-  assert.ok(/placeholder:/.test(template), '模板模式缺少占位符')
-  assert.ok(/换成/.test(template), '模板模式占位符未提示「换成什么」')
-  assert.ok(/文字/.test(template), '模板模式占位符未提到文字')
+  const placeholder = template.match(/placeholder:\s*'([^']*)'/)
+  assert.ok(placeholder, '模板模式缺少占位符')
+  assert.ok(/换成/.test(placeholder[1]), '模板模式占位符未提示「换成什么」')
+  assert.ok(/主标题|文字/.test(placeholder[1]), '模板模式占位符未提到文字')
 })
 
 test('四种模式都有各自的占位符', function () {

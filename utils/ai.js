@@ -20,6 +20,41 @@ const IMAGE_SYSTEM_PROMPT = [
   '只输出提示词正文，不要输出解释、标题或引号。'
 ].join('')
 
+/**
+ * 素材 / 模板创作的专属排版指令（叠在通用指令之上）。
+ *
+ * 这两条线的典型用法是「拿一张底图，把手头那段文案排进去」：
+ * 让用户把标题、时间逐条抄进提示词太麻烦，所以交给模型从文案里自己抽。
+ * 关键是**不许编造**——文案里没有的就别硬排，完全没有这类信息就退回
+ * 按用户的画面描述自由创作，否则每张海报都会被塞上一堆假信息。
+ */
+const POSTER_LAYOUT_INSTRUCTION = [
+  '这是一张海报的生成任务，请先从用户提供的文案中识别并提取这些要素：',
+  '标题、小组、时间、学习主题、学习内容。',
+  '排布规则：标题字号最大，放在画面视觉重心（上或中上）；',
+  '学习主题与学习内容作为主体信息，居中或分区排布，层次分明；',
+  '小组与时间作为辅助信息，放在下方或角落，字号小于标题。',
+  '提取到的文字必须逐字准确出现，不得改写、不得翻译、不得臆造；',
+  '文案里没有对应关键词的要素就不要编，缺哪一项就少排哪一项。',
+  '若文案里完全没有这类信息（没有标题、时间、主题等），',
+  '则完全依据用户的画面描述创作，不要在画面里硬加文字。'
+].join('')
+
+/**
+ * 按任务拼系统指令。
+ * @param {{ extractPosterFields?: boolean }} [options] 素材/模板创作要叠加海报要素提取规则
+ */
+function buildSystemPrompt(options) {
+  const source = options || {}
+  if (!source.extractPosterFields) return IMAGE_SYSTEM_PROMPT
+  return IMAGE_SYSTEM_PROMPT + POSTER_LAYOUT_INSTRUCTION
+}
+
+/** 海报要素提取的用户侧一句话任务，与上面的系统规则配套 */
+const POSTER_FIELDS_TASK =
+  '请先从文案中提取「标题、小组、时间、学习主题、学习内容」，' +
+  '再据此输出一条完整的中文图像生成提示词；文案里没有的信息不要编。'
+
 async function pickModel() {
   const models = await cloudModels()
   if (!models || !models.length) {
@@ -151,9 +186,12 @@ async function expandCompositePrompt(options) {
   if (source.aspect) {
     lines.push('画面比例要求：' + source.aspect + '（宽:高），务必按这个比例构图。')
   }
+  if (source.extractPosterFields) {
+    lines.push(POSTER_FIELDS_TASK)
+  }
   lines.push('')
   lines.push('请输出一条完整的中文图像生成提示词。')
-  return chat(lines.join('\n'), IMAGE_SYSTEM_PROMPT, source.onDelta)
+  return chat(lines.join('\n'), buildSystemPrompt(source), source.onDelta)
 }
 
 /**
@@ -212,5 +250,8 @@ module.exports = {
   expandCompositePrompt,
   composeImageNotes,
   generateImage,
+  buildSystemPrompt,
+  POSTER_LAYOUT_INSTRUCTION,
+  POSTER_FIELDS_TASK,
   pickModel
 }

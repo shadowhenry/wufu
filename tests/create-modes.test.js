@@ -378,6 +378,53 @@ test('提示词带着底图说明与贴图张数一起交给模型', async funct
   assert.ok(call.artworks[0].indexOf('2 张贴图') > -1, '贴图张数未传给模型')
 })
 
+test('素材与模板创作带上「提取海报要素」的排版指令', async function () {
+  const material = createPage()
+  material.onLoad({ mode: 'material', materialKey: 'shanshui_1' })
+  material.setData({ input: '读书会海报' })
+  aiCalls.length = 0
+  material.generate()
+  await flushAll()
+  assert.strictEqual(aiCalls[0].extractPosterFields, true, '素材创作未带提取标记')
+
+  const template = createPage()
+  template.onLoad({ mode: 'template', templateKey: 'ink_mountain' })
+  template.setData({ input: '读书会海报' })
+  aiCalls.length = 0
+  template.generate()
+  await flushAll()
+  assert.strictEqual(aiCalls[0].extractPosterFields, true, '模板创作未带提取标记')
+})
+
+test('拼贴与 AI 创作不套海报要素模板', async function () {
+  const page = createPage()
+  page.onLoad({ mode: 'collage' })
+  page.setData({ input: '把这张图改成秋天', reference: { path: '/tmp/a.png', name: '底图' } })
+  aiCalls.length = 0
+  page.generate()
+  await flushAll()
+  assert.strictEqual(aiCalls[0].extractPosterFields, false, '拼贴创作不该套海报要素')
+
+  const aiPage = createPage()
+  aiPage.onLoad({ mode: 'ai' })
+  aiPage.setData({ input: '远山孤舟' })
+  aiCalls.length = 0
+  aiPage.generate()
+  await flushAll()
+  assert.strictEqual(aiCalls[0].extractPosterFields, false, 'AI 创作不该套海报要素')
+})
+
+test('系统指令里写清要提取的五个要素，且不许编造', function () {
+  const withFields = realAi.buildSystemPrompt({ extractPosterFields: true })
+  ;['标题', '小组', '时间', '学习主题', '学习内容'].forEach((field) => {
+    assert.ok(withFields.indexOf(field) > -1, '系统指令缺少要素：' + field)
+  })
+  assert.ok(/不要编|不得臆造|不要硬加/.test(withFields), '未约束不得编造要素')
+  const plain = realAi.buildSystemPrompt({})
+  assert.ok(plain.indexOf('学习主题') === -1, '非素材/模板模式不该带海报要素规则')
+  assert.ok(withFields.indexOf(plain) === 0, '排版指令应叠加在通用指令之上')
+})
+
 test('出图结果进结果列表，可保存为作品', async function () {
   const page = createPage()
   page.onLoad({ mode: 'ai' })

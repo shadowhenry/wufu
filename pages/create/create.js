@@ -23,19 +23,23 @@ const { findBuiltinMaterial } = require('../../utils/materials')
 const MODES = {
   material: {
     title: '素材创作',
-    hint: '以这张素材图为底图，在提示词里写清要加什么文字与元素，AI 重新生成一张新图',
+    hint: '以这张素材图为底图：可以直接贴一段文案，AI 会提取标题、小组、时间、学习主题、学习内容排进画面；也可以自己写想要加的文字与元素',
     placeholder: '例如：保留这张图的色调，上方加主标题「山水之境」，左下角加落款',
     referenceLabel: '素材底图',
     requireReference: true,
-    showArtwork: true
+    showArtwork: true,
+    // 素材/模板的典型用法是「把一段文案排进一张图」，交给 AI 从文案里抽
+    // 标题、小组、时间、学习主题、学习内容；抽不到就按用户描述自由创作
+    extractPosterFields: true
   },
   template: {
     title: '模板创作',
-    hint: '以这张图为底图，在提示词里写清要换掉哪些文字与元素，AI 重新生成一张新图',
+    hint: '以这张图为底图：可以直接贴一段文案，AI 会提取标题、小组、时间、学习主题、学习内容重排这张海报；也可以自己写要换成什么',
     placeholder: '例如：保留这个版式，主标题换成「春山可望」，中间的人物换成一只白鹤',
     referenceLabel: '模板底图',
     requireReference: true,
-    showArtwork: true
+    showArtwork: true,
+    extractPosterFields: true
   },
   collage: {
     title: '拼贴创作',
@@ -496,7 +500,14 @@ Page({
     const artworks = count
       ? ['用户另外提供了 ' + count + ' 张贴图素材，请将其中的元素气质融入画面']
       : []
-    return { input: input, texts: [], artworks: artworks, aspect: aspectOf(this.data.sizeKey) }
+    return {
+      input: input,
+      texts: [],
+      artworks: artworks,
+      aspect: aspectOf(this.data.sizeKey),
+      // 素材/模板创作额外叠加「从文案里提取海报要素」的排版指令
+      extractPosterFields: !!MODES[this.mode].extractPosterFields
+    }
   },
 
   /** 参考图说明：底图走的是「描述」通道，底图叫什么、是什么风格要讲清楚 */
@@ -543,6 +554,7 @@ Page({
         artworks: payload.artworks,
         aspect: payload.aspect,
         referenceNote: this.referenceNote(),
+        extractPosterFields: payload.extractPosterFields,
         onDelta: (text) => this.setData({ streamText: text })
       })
       .then((prompt) => {
