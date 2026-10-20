@@ -19,6 +19,7 @@
             src="{{reference.path}}"
             mode="aspectFit"
             bindload="onRefLoad"
+            binderror="onRefError"
             bindtap="previewReference"
           />
         </view>

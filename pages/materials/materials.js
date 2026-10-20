@@ -91,13 +91,28 @@ Page({
     const target = this.data.items.find((item) => String(item.id) === String(id))
     if (!target) return
     // 内置素材带本地路径，云端素材带存储路径，创作页据此分别取图
+    const builtin = target.source === 'builtin'
+    const value = builtin ? target.displayPath || '' : target.storagePath || ''
+    // 图还没取到就跳转，创作页只会拿到空底图（用户看到一个空的选图框）。
+    // 这里直接拦住并说明原因，比让用户在创作页对着空框猜要好。
+    if (!value) {
+      app.toast('这张图还在加载，稍等一下再点')
+      return
+    }
     const query = [
       'mode=material',
       'name=' + encodeURIComponent(target.name || '素材图'),
-      target.source === 'builtin'
-        ? 'path=' + encodeURIComponent(target.displayPath || '')
-        : 'storagePath=' + encodeURIComponent(target.storagePath || '')
+      builtin ? 'path=' + encodeURIComponent(value) : 'storagePath=' + encodeURIComponent(value)
     ].join('&')
+    // 兜底：本地路径带斜杠，URL 参数万一在传递中丢了，创作页还能从这里取回图，
+    // 不至于只剩一个空的选图框。
+    if (app.globalData) {
+      app.globalData.pendingMaterial = {
+        path: builtin ? value : '',
+        storagePath: builtin ? '' : value,
+        name: target.name || '素材图'
+      }
+    }
     wx.navigateTo({ url: '/pages/create/create?' + query })
   },
 

@@ -66,25 +66,33 @@ const backCalls = []
 const requireSignInCalls = []
 const ensureCalls = []
 const doSignInCalls = []
-global.getApp = () => ({
-  globalData: { user: { id: 'u1', name: 'Henry' }, signedIn: true, sessionReady: Promise.resolve() },
-  canRead: () => true,
-  canWrite: () => appWritable,
-  whenSessionReady: () => Promise.resolve(sessionSignedIn),
-  doSignIn: () => Promise.resolve(true),
-  requireSignIn: (reason) => {
-    requireSignInCalls.push(reason || '')
-    return Promise.resolve(signInResult)
-  },
-  ensureWritable: (action) => {
-    ensureCalls.push(action)
-    return Promise.resolve(writable)
-  },
-  registerNotice: () => {},
-  showNotice: () => {},
-  toast: () => {},
-  reportError: () => ''
-})
+const toastCalls = []
+// 单例：页面 JS 在模块加载时就 getApp() 存了一份引用，测试里必须拿到同一个实例
+let appStub = null
+global.getApp = () => {
+  if (!appStub) {
+    appStub = {
+      globalData: { user: { id: 'u1', name: 'Henry' }, signedIn: true, sessionReady: Promise.resolve() },
+      canRead: () => true,
+      canWrite: () => appWritable,
+      whenSessionReady: () => Promise.resolve(sessionSignedIn),
+      doSignIn: () => Promise.resolve(true),
+      requireSignIn: (reason) => {
+        requireSignInCalls.push(reason || '')
+        return Promise.resolve(signInResult)
+      },
+      ensureWritable: (action) => {
+        ensureCalls.push(action)
+        return Promise.resolve(writable)
+      },
+      registerNotice: () => {},
+      showNotice: () => {},
+      toast: (message) => toastCalls.push(message),
+      reportError: () => ''
+    }
+  }
+  return appStub
+}
 
 const aiCalls = []
 const resolvedImages = {}
@@ -203,6 +211,37 @@ test('云端素材的 storagePath 先换成可展示的临时文件', async func
   page.onLoad({ mode: 'material', name: 'AI 素材', storagePath: 'users/u1/materials/9.png' })
   await flush()
   assert.strictEqual(page.data.reference.path, '/tmp/cloud.png')
+})
+
+test('URL 参数丢失时用全局兜底把素材图取回来', function () {
+  const app = global.getApp()
+  app.globalData.pendingMaterial = {
+    path: '/assets/materials/shanshui_1.jpg',
+    storagePath: '',
+    name: '远山孤舟'
+  }
+  const page = createPage()
+  page.onLoad({ mode: 'material' })
+  assert.strictEqual(page.data.reference.path, '/assets/materials/shanshui_1.jpg')
+  assert.strictEqual(page.data.reference.name, '远山孤舟')
+  assert.strictEqual(app.globalData.pendingMaterial, null, '兜底用完要清掉，避免下次误用')
+})
+
+test('底图路径都没取到时给出提示，而不是静默留一个空框', function () {
+  const app = global.getApp()
+  app.globalData.pendingMaterial = null
+  toastCalls.length = 0
+  const page = createPage()
+  page.onLoad({ mode: 'material' })
+  assert.strictEqual(page.data.reference.path, '')
+  assert.ok(toastCalls.length > 0, '应提示用户，而不是什么都不说')
+})
+
+test('模板 key 没传过来时同样给出提示', function () {
+  toastCalls.length = 0
+  const page = createPage()
+  page.onLoad({ mode: 'template' })
+  assert.ok(toastCalls.length > 0, '模板 key 缺失应提示')
 })
 
 // ---- 模板模式 ----

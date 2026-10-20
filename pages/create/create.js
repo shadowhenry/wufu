@@ -157,6 +157,8 @@ Page({
 
   onLoad(options) {
     const query = options || {}
+    // 入口参数留痕：底图没出现时，控制台一眼就能看出是没传过来还是没解析出来
+    console.info('[create] onLoad query', JSON.stringify(query))
     this.mode = normalizeMode(query.mode)
     const config = MODES[this.mode]
     this.templateKey = query.templateKey || ''
@@ -217,9 +219,24 @@ Page({
   },
 
   applyMaterialSeed(query) {
-    const name = query.name || '素材图'
-    const seed = { path: query.path || '', name: name, storagePath: query.storagePath || '' }
-    if (!seed.path && !seed.storagePath) return
+    // URL 参数是主通道，全局兜底只在参数丢失时补位（例如含斜杠的本地路径
+    // 在传递中被吞掉）。取到即用掉，避免下次进页误用上一张图。
+    const pending = (app.globalData && app.globalData.pendingMaterial) || null
+    const name = query.name || (pending && pending.name) || '素材图'
+    const seed = {
+      path: query.path || (pending && pending.path) || '',
+      name: name,
+      storagePath: query.storagePath || (pending && pending.storagePath) || ''
+    }
+    if ((seed.path || seed.storagePath) && app.globalData) {
+      app.globalData.pendingMaterial = null
+    }
+    // 两种路径都空说明上游没把图带过来。以前这里静默返回，用户只看到一个空的
+    // 选图框，根本不知道发生了什么——现在明确说出来。
+    if (!seed.path && !seed.storagePath) {
+      app.toast('没有取到这张素材，请回素材库重新点一次')
+      return
+    }
     if (seed.path) {
       this.applyReference(seed)
       return
@@ -228,14 +245,21 @@ Page({
     repo
       .resolveImage(seed.storagePath)
       .then((tempPath) => {
-        this.applyReference({ path: tempPath || '', name: name, storagePath: seed.storagePath })
+        if (!tempPath) {
+          app.toast('素材图读取为空，请回素材库重试')
+          return
+        }
+        this.applyReference({ path: tempPath, name: name, storagePath: seed.storagePath })
       })
       .catch((error) => app.reportError(error, '素材读取失败'))
   },
 
   applyTemplateSeed(query) {
     const key = query.templateKey || ''
-    if (!key) return
+    if (!key) {
+      app.toast('没有取到这个模板，请回模板库重新点一次')
+      return
+    }
     const builtin = findBuiltinTemplate(key)
     if (builtin) {
       this.fillTemplate(builtin)
@@ -243,7 +267,10 @@ Page({
     }
     // 云端模板：key 形如 cloud_123
     const id = key.indexOf('cloud_') === 0 ? key.slice('cloud_'.length) : ''
-    if (!id) return
+    if (!id) {
+      app.toast('这个模板暂时打不开，请回模板库重试')
+      return
+    }
     repo
       .listTemplates()
       .then((rows) => {
@@ -264,7 +291,10 @@ Page({
   fillTemplate(template) {
     this.templateName = template.name || this.templateName
     const cover = templateCoverPath(template)
-    if (!cover) return
+    if (!cover) {
+      app.toast('这个模板没有底图，换一个试试')
+      return
+    }
     // 内置模板是本地路径可直接展示；云端模板只带 storagePath，要先换成临时文件
     if (cover.charAt(0) === '/') {
       this.applyReference({ path: cover, name: template.name || '模板底图' })
@@ -345,6 +375,14 @@ Page({
     const height = Number(detail.height)
     if (width > 0 && height > 0) this.setData({ refRatio: width / height })
     this.syncRefSize()
+  },
+
+  /**
+   * 底图加载失败必须出声：路径失效或临时文件被清掉时，创作区只是一个空白的
+   * 米色框，用户分不清是「没选图」还是「图没加载出来」。
+   */
+  onRefError() {
+    app.toast('底图加载失败，点右下角「更换」重新选一张')
   },
 
   /** 点底图看大图：底图区不放任何文字，看原图只能靠点它 */
