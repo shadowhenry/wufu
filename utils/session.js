@@ -37,10 +37,13 @@ function describeError(error, fallback) {
 function describeWechatError(error, appid) {
   const reason = serverReason(error) || ''
   if (/未授权|access_denied|not authorized|unauthorized/i.test(reason)) {
+    // 这一步只能在 WorkBuddy 侧完成：把小程序账号扫码绑定给本云项目。
+    // 微信公众平台的域名白名单是网络层配置，跟这里的身份授权是两回事，
+    // 光配白名单不会让 access_denied 消失。
     return (
-      '该小程序尚未在 WorkBuddy 授权：请在 WorkBuddy 控制台把 AppID「' +
-      (appid || '未知') +
-      '」加入云项目的授权小程序列表后重试'
+      'AppID「' + (appid || '未知') + '」尚未授权给 WorkBuddy：' +
+      '请在 WorkBuddy 打开本小程序的应用面板，从预览区右上角「分享」进入发布流程，' +
+      '用该小程序管理员微信扫码完成账号绑定后重试'
     )
   }
   return describeError(error, '微信登录失败')

@@ -4,7 +4,7 @@ const { createDiagnosticWx } = require('./workbuddy-cloud-diagnostics')
 // 由云服务环境开通时返回的公开配置，只有这三个值可以进前端代码。
 const publicConfig = {
   endpoint: 'https://mp-api.app.workbuddy.host',
-  publishableKey: 'wbpk_RKMsdv785EYm9zo0aM2r0m_FJ0fnjC6FDhP6C4dH7bQEwioLfjlrg4j'
+  publishableKey: 'wbpk_nFRDBx0LsMuRQR5dySL9iu_EWiq5Ny4ZxAY1RsutU6yyMtElfTZ02Le'
 }
 
 const cloud = createMiniProgramWorkBuddyCloud({

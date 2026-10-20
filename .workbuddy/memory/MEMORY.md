@@ -15,8 +15,23 @@
   的 `createDiagnosticWx(wx)` 包一层。
 
 ### 必须遵守的约定
-- **不要硬编码 endpoint / publishableKey**：唯一来源是 `utils/cloud.js` 里的 `publicConfig`，
-  该值由云服务开通时返回。miniprogram 的 endpoint 是平台固定网关，不是自有域名。
+- **AppID `wx4f18ac26f385aa8f`** 写在 `project.config.json`；登录代码不硬编码 appid，
+  运行时取 `wx.getAccountInfoSync().miniProgram.appId` → `cloud.auth.signInWithWechat(code, appid)`。
+- **AppSecret 绝不进前端、不进 git**：code→openid 的兑换在云后端完成，
+  secret 只填在 WorkBuddy 云服务后台。前端 `utils/cloud.js` 只允许 endpoint + publishableKey。
+
+### 真机域名白名单（2026-10-21 核过）
+整条链路只有 **一个域名**：`https://mp-api.app.workbuddy.host`
+（SDK 的 auth / storage / db / llm 全部由 endpoint 派生，
+`storage.createSignedUrl` 返回的也是 `${this.url}${signedURL}`，同域）。
+- **request 合法域名**：mp-api.app.workbuddy.host（必配）
+- **downloadFile 合法域名**：同上（`resolveImage` 下载云端素材/模板/成品图）
+- **uploadFile 合法域名**：可留空——SDK 上传走 `wx.request` 发二进制 body，
+  业务代码没有直接调 `wx.uploadFile`；填上同域名也无害
+- **socket 合法域名**：不需要——SDK 流式用 `wx.request` + `enableChunked`，不用 WebSocket
+- ⚠️ 唯一不确定项：图像模型若**直接返回图片 URL**（不是 base64），
+  `saveToAlbum` 的 `wx.downloadFile` 会去模型侧域名取图。
+  真机若报「图片下载失败」，从报错里取域名补进 downloadFile 白名单。
 - **`owner_id` 一律不由前端发送**：数据库靠 `DEFAULT auth.uid()` 填充，RLS 的
   `WITH CHECK (owner_id = auth.uid())` 负责防伪造。
 - **WXML 表达式不是 JS**：不用 `?.`、`??`、箭头函数、方法调用，复杂逻辑先在 Page JS 里算好再 setData。
