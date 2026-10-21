@@ -55,18 +55,72 @@ const POSTER_FIELDS_TASK =
   '请先从文案中提取「标题、小组、时间、学习主题、学习内容」，' +
   '再据此输出一条完整的中文图像生成提示词；文案里没有的信息不要编。'
 
+/**
+ * 文本模型候选顺序。
+ *
+ * ⚠️ 目录里的 `enabled: true` 不代表这个 id 真能调通：实测 `glm-4.6v` /
+ * `glm-4.6` 一律返回 400 `request_invalid_parameter`，而 `auto`、
+ * `deepseek-v4.1-flash`、`glm-5.3-flash`、`hy3` 都正常。
+ * 所以这里按**实测可用**排序，并且调用失败时自动换下一个（见 chat）。
+ */
+const TEXT_MODEL_CANDIDATES = ['auto', 'deepseek-v4.1-flash', 'glm-5.3-flash', 'hy3']
+/** 最多试几个模型，避免一次请求把整份目录都试一遍 */
+const MAX_MODEL_TRIES = 4
+
+/** 调用失败确认为「模型用不了」后记下来，本次会话内不再选它 */
+const brokenModels = {}
+
+function isUsable(model) {
+  return !!(
+    model &&
+    model.id &&
+    model.disabled !== true &&
+    model.enabled !== false &&
+    !brokenModels[model.id]
+  )
+}
+
+/** 按候选顺序挑可用模型，候选之外再补目录里的其余模型兜底 */
+function pickModels(models, candidates, matcher) {
+  const pool = (models || []).filter(isUsable)
+  const matched = typeof matcher === 'function' ? pool.filter(matcher) : pool
+  const picked = []
+  const push = (item) => {
+    if (item && picked.indexOf(item) === -1) picked.push(item)
+  }
+  ;(candidates || []).forEach((id) => push(matched.find((item) => item.id === id)))
+  matched.forEach(push)
+  return picked.slice(0, MAX_MODEL_TRIES)
+}
+
+/** 文本模型：候选优先，其余目录项兜底 */
+function pickTextModels(models) {
+  return pickModels(models, TEXT_MODEL_CANDIDATES)
+}
+
+/**
+ * 生图模型：认 id / 名称里带 image 的。
+ * 目录里目前只有 `hunyuan-image-alpha`，写死一个 id 会在平台换模型时直接失效，
+ * 所以按特征筛，平台以后加了新模型也能自动用上。
+ */
+function pickImageModels(models) {
+  return pickModels(models, ['hunyuan-image-alpha'], (item) =>
+    /image/i.test(item.id || '') || /image|生图|画图/i.test(item.name || '')
+  )
+}
+
+/** 这个错误是不是「换个模型就能好」——参数/模型不可用才重试，额度与鉴权不必 */
+function isModelUnavailable(error) {
+  const code = error && error.llmCode ? String(error.llmCode) : ''
+  if (code.indexOf('request_') === 0 || code.indexOf('model_') === 0) return true
+  return error && error.status === 400
+}
+
 async function pickModel() {
   const models = await cloudModels()
-  if (!models || !models.length) {
-    throw new Error('当前没有可用的模型')
-  }
-  const usable = models.filter((item) => item.disabled !== true && item.enabled !== false)
-  const preferred = usable.find((item) => item.id === 'glm-4.6v')
-    || usable.find((item) => item.id === 'deepseek-v4.1-flash')
-    || usable.find((item) => item.id === 'auto')
-    || usable[0]
-  if (!preferred) throw new Error('当前没有可用的模型')
-  return preferred
+  const picked = pickTextModels(models)
+  if (!picked.length) throw new Error('当前没有可用的模型')
+  return picked[0]
 }
 
 let modelCache = null
@@ -79,21 +133,19 @@ async function cloudModels() {
   return modelCache
 }
 
-/** 统一的流式对话调用，返回完整文本 */
-async function chat(prompt, systemPrompt, onDelta) {
-  const model = await pickModel()
+/**
+ * 单次调用。失败时把平台错误码挂在 error.llmCode 上，
+ * 交给上层判断要不要换模型，而不是一律当成「生成失败」。
+ */
+async function chatOnce(modelId, messages, temperature, onDelta) {
   const { cloud } = require('./cloud')
   let content = ''
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: prompt }
-  ]
   try {
     const stream = cloud.llm.chat.completions.create({
-      model: model.id,
+      model: modelId,
       messages: messages,
       stream: true,
-      temperature: 0.8
+      temperature: temperature
     })
     for await (const chunk of stream) {
       const delta = chunk.choices && chunk.choices[0] ? chunk.choices[0].delta : null
@@ -104,15 +156,43 @@ async function chat(prompt, systemPrompt, onDelta) {
     }
   } catch (error) {
     const code = error && error.error ? error.error.code : ''
-    if (typeof code === 'string' && code.indexOf('quota_') === 0) {
-      throw new Error('额度不足，暂时无法生成')
-    }
-    if (typeof code === 'string' && code.indexOf('auth_') === 0) {
-      throw new Error('调用被拒绝，请稍后重试')
-    }
-    throw new Error(describeError(error, 'AI 生成失败，请重试'))
+    error.llmCode = typeof code === 'string' ? code : ''
+    throw error
   }
   return content
+}
+
+/** 统一的流式对话调用，返回完整文本；模型调不通就换下一个 */
+async function chat(prompt, systemPrompt, onDelta) {
+  const models = await cloudModels()
+  const candidates = pickTextModels(models)
+  if (!candidates.length) throw new Error('当前没有可用的模型')
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: prompt }
+  ]
+  let lastError = null
+  for (let i = 0; i < candidates.length; i += 1) {
+    const model = candidates[i]
+    try {
+      return await chatOnce(model.id, messages, 0.8, onDelta)
+    } catch (error) {
+      lastError = error
+      const code = error && error.llmCode ? String(error.llmCode) : ''
+      if (typeof code === 'string' && code.indexOf('quota_') === 0) {
+        throw new Error('额度不足，暂时无法生成')
+      }
+      if (typeof code === 'string' && code.indexOf('auth_') === 0) {
+        throw new Error('调用被拒绝，请稍后重试')
+      }
+      if (!isModelUnavailable(error)) {
+        throw new Error(describeError(error, 'AI 生成失败，请重试'))
+      }
+      brokenModels[model.id] = true
+      console.warn('[ai] 模型调不通，换下一个：' + model.id + ' ' + code)
+    }
+  }
+  throw new Error(describeError(lastError, 'AI 生成失败，请重试'))
 }
 
 /** 文生图提示词扩写 */
@@ -197,34 +277,41 @@ async function expandCompositePrompt(options) {
 /**
  * 图像模型调用。
  * 返回值可能是 base64 图片数据，也可能是图片 URL——两种都由调用方处理。
+ *
+ * 生图模型不像文本模型那样有多个候选，所以每个候选都试一遍：
+ * 平台目录会变，写死一个 id（现在只有 hunyuan-image-alpha）在它下线或
+ * 换名时会直接让整条出图链路失效。
  */
 async function generateImage(prompt) {
-  const { cloud } = require('./cloud')
   const models = await cloudModels()
-  const imageModel = models.find((item) => item.id === 'hunyuan-image-alpha' && item.disabled !== true)
-  if (!imageModel) {
-    throw new Error('当前没有可用的图像模型')
+  const candidates = pickImageModels(models)
+  if (!candidates.length) {
+    throw new Error('云服务里没有可用的生图模型，请到控制台确认生图能力已开启')
   }
-  let content = ''
-  const stream = cloud.llm.chat.completions.create({
-    model: imageModel.id,
-    messages: [
-      { role: 'system', content: '你是一个图像生成器，只输出生成结果，不要解释。' },
-      { role: 'user', content: prompt }
-    ],
-    stream: true,
-    temperature: 1
-  })
-  for await (const chunk of stream) {
-    const choice = chunk.choices && chunk.choices[0]
-    const delta = choice ? choice.delta : null
-    if (delta && delta.content) content += delta.content
+  const messages = [
+    { role: 'system', content: '你是一个图像生成器，只输出生成结果，不要解释。' },
+    { role: 'user', content: prompt }
+  ]
+  let lastError = null
+  for (let i = 0; i < candidates.length; i += 1) {
+    const model = candidates[i]
+    try {
+      const content = await chatOnce(model.id, messages, 1, null)
+      const payload = extractImagePayload(content)
+      if (payload) return payload
+      lastError = new Error('图像模型未返回图片')
+    } catch (error) {
+      lastError = error
+      if (!isModelUnavailable(error)) throw error
+      brokenModels[model.id] = true
+      console.warn('[ai] 生图模型调不通，换下一个：' + model.id)
+    }
   }
-  const base64 = extractImagePayload(content)
-  if (!base64) {
-    throw new Error('图像模型未返回图片，请更换描述重试')
-  }
-  return base64
+  throw new Error(
+    '生图模型不可用（' +
+      candidates.map((item) => item.id).join('、') +
+      '），请到控制台确认生图能力；提示词已生成，可先复制留用'
+  )
 }
 
 /** 从模型输出里取出图片 base64（兼容 markdown 与裸 base64） */
@@ -251,6 +338,8 @@ module.exports = {
   composeImageNotes,
   generateImage,
   buildSystemPrompt,
+  pickTextModels,
+  pickImageModels,
   POSTER_LAYOUT_INSTRUCTION,
   POSTER_FIELDS_TASK,
   pickModel

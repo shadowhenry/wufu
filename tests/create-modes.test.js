@@ -425,6 +425,45 @@ test('系统指令里写清要提取的五个要素，且不许编造', function
   assert.ok(withFields.indexOf(plain) === 0, '排版指令应叠加在通用指令之上')
 })
 
+// ---- 模型选择：目录里 enabled 不等于调得通 ----
+
+const CATALOG = [
+  { id: 'glm-4.6v', enabled: true },
+  { id: 'glm-4.6', enabled: true },
+  { id: 'auto', enabled: true },
+  { id: 'deepseek-v4.1-flash', enabled: true },
+  { id: 'glm-5.3-flash', enabled: true },
+  { id: 'off-model', enabled: false },
+  { id: 'hunyuan-image-alpha', enabled: true }
+]
+
+test('文本模型首选实测可用的，不挑已失效的 glm-4.6v', function () {
+  const picked = realAi.pickTextModels(CATALOG).map((item) => item.id)
+  assert.strictEqual(picked[0], 'auto', '首选应是实测可用的 auto，实际是 ' + picked[0])
+  assert.ok(
+    picked.indexOf('deepseek-v4.1-flash') < picked.indexOf('glm-4.6v'),
+    '实测可用的模型要排在失效模型前面'
+  )
+  assert.ok(picked.indexOf('off-model') === -1, 'disabled 的模型不该入选')
+})
+
+test('目录里没有候选模型时也能兜底', function () {
+  const picked = realAi.pickTextModels([{ id: 'only-one', enabled: true }])
+  assert.strictEqual(picked.length, 1)
+  assert.strictEqual(picked[0].id, 'only-one')
+  assert.deepStrictEqual(realAi.pickTextModels([]), [], '空目录返回空，不编造模型 id')
+})
+
+test('生图模型按 image 特征筛，不写死单个 id', function () {
+  const picked = realAi.pickImageModels(CATALOG).map((item) => item.id)
+  assert.strictEqual(picked[0], 'hunyuan-image-alpha')
+  assert.ok(picked.indexOf('auto') === -1, '文本模型不该被当成生图模型')
+  // 平台以后换模型名，只要带 image 就能自动用上
+  const renamed = realAi.pickImageModels([{ id: 'hunyuan-image-beta', enabled: true }])
+  assert.strictEqual(renamed[0].id, 'hunyuan-image-beta')
+  assert.deepStrictEqual(realAi.pickImageModels([{ id: 'auto', enabled: true }]), [])
+})
+
 test('出图结果进结果列表，可保存为作品', async function () {
   const page = createPage()
   page.onLoad({ mode: 'ai' })
