@@ -69,15 +69,29 @@ Page({
 
   loadThumb(id, storagePath) {
     if (!storagePath) return
-    repo.resolveImage(storagePath)
+    repo
+      .resolveImage(storagePath)
       .then((tempPath) => {
         this.setData({
           items: this.data.items.map((row) =>
-            row.id === id ? Object.assign({}, row, { displayPath: tempPath }) : row
+            row.id === id ? Object.assign({}, row, { displayPath: tempPath || '' }) : row
           )
         })
       })
-      .catch(() => {})
+      .catch((error) => {
+        // 缩略图取不到时格子会是一个空白方块，用户只能以为是上传失败。
+        // 这里把原因打到控制台，界面上也留一个可点的重试位。
+        console.error('[materials] 缩略图加载失败', id, storagePath, error && error.message)
+      })
+  },
+
+  /** 缩略图没取到时点一下重取 */
+  retryThumb(event) {
+    const id = event.currentTarget.dataset.id
+    const target = this.data.items.find((item) => String(item.id) === String(id))
+    if (!target || !target.storagePath) return
+    app.toast('重新加载这张图')
+    this.loadThumb(target.id, target.storagePath)
   },
 
   preview(event) {
@@ -161,6 +175,13 @@ Page({
       app.goLogin('上传素材需要登录')
       return
     }
+    // canWrite 只看本地登录标记，不代表身份真的可用；
+    // 没有 uid 时上传注定失败，这里提前说清楚，别让用户等到「上传失败」才懵。
+    const user = (app.globalData && app.globalData.user) || {}
+    if (!user.id) {
+      app.toast('登录状态没拿到，请重新登录后再上传')
+      return
+    }
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -179,9 +200,15 @@ Page({
     app.ensureWritable('上传素材').then((ok) => {
       if (!ok) return
       wx.showLoading({ title: '压缩中…', mask: true })
-      // 与创作页共用同一条入库链路：压缩 → 上传 → 建记录
+      // 与创作页共用同一条入库链路：压缩 → 上传 → 建记录。
+      // 分类跟随当前所在的标签页，否则在「山水图」下传的图会被存成风景图，
+      // 列表按当前分类重新拉取时它就不在结果里——看起来像上传没生效。
+      const active = this.data.active
       upload
-        .saveToMaterials(app, filePath, { name: '我的素材' })
+        .saveToMaterials(app, filePath, {
+          name: '我的素材',
+          category: active === 'all' ? 'landscape' : active
+        })
         .then((result) => {
           wx.hideLoading()
           this.compressedInfo = result.info

@@ -31,6 +31,7 @@
   <view wx:else class="grid">
     <view class="cell" wx:for="{{items}}" wx:key="id">
       <image
+        wx:if="{{item.displayPath}}"
         class="thumb"
         src="{{item.displayPath}}"
         mode="aspectFill"
@@ -38,6 +39,12 @@
         bindtap="useMaterial"
         bindlongpress="preview"
       />
+      <!-- 云端素材要先换成签名链接才能显示。没取到时留一个可点的占位，
+           否则用户只看到一个空白格子，分不清是上传失败还是图没加载出来。 -->
+      <view wx:else class="thumb thumb-pending" data-id="{{item.id}}" bindtap="retryThumb">
+        <text class="pending-text">图没加载出来</text>
+        <text class="pending-hint">点我重试</text>
+      </view>
       <view wx:if="{{item.source !== 'builtin'}}" class="cell-del" data-id="{{item.id}}" catchtap="remove">×</view>
     </view>
   </view>

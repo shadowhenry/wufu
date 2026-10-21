@@ -18,13 +18,21 @@ const repo = require('./repository')
  */
 async function saveToMaterials(app, filePath, options) {
   const meta = options || {}
+  const user = (app && app.globalData && app.globalData.user) || {}
+  // 没有 uid 就不要往下走：对象路径会变成 users//materials/...，
+  // 插入也会被 RLS 拒（owner_id 取不到 auth.uid()），
+  // 最后只在界面上落一个「上传失败」，看不出到底卡在哪。
+  if (!user.id) {
+    throw new Error('登录状态没拿到，请重新登录后再上传')
+  }
   const compressed = await image.compressUnderLimit(filePath)
   if (compressed.stillOversize) {
     throw new Error('图片过大（' + image.formatSize(compressed.bytes) + '），换一张试试')
   }
-  const user = (app && app.globalData && app.globalData.user) || {}
+  console.info('[upload] 压缩完成', image.formatSize(compressed.bytes))
   const storagePath = await repo.uploadLocalFile(user.id, 'materials', compressed.path, 'image/jpeg')
-  await repo.insertMaterial({
+  console.info('[upload] 已上传对象', storagePath)
+  const row = await repo.insertMaterial({
     name: meta.name || '我的素材',
     category: meta.category || 'landscape',
     source: meta.source || 'upload',
@@ -34,6 +42,7 @@ async function saveToMaterials(app, filePath, options) {
     height: compressed.height,
     owner_name: user.name || null
   })
+  console.info('[upload] 已建素材记录', JSON.stringify(row || null))
   return { storagePath: storagePath, info: compressed }
 }
 

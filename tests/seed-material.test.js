@@ -120,6 +120,34 @@ test('上传前有 ensureWritable 权限前置检查', function () {
   assert.ok(materialsSource.indexOf('ensureWritable') > -1, '素材页缺少写入权限前置检查')
 })
 
+// ---- 上传可见 ----
+
+test('上传前先确认拿到 uid，没有就直说', function () {
+  const uploadSource = fs.readFileSync(path.join(root, 'utils/upload.js'), 'utf8')
+  assert.ok(/user\.id/.test(uploadSource), '入库链路未用真实 uid')
+  assert.ok(
+    /登录状态没拿到/.test(uploadSource),
+    '没有 uid 时应明确提示，否则只会落一个看不懂的「上传失败」'
+  )
+  const guard = materialsSource.match(/uploadImage\(\)\s*\{[\s\S]*?\n  \},/)
+  assert.ok(guard, '未找到 uploadImage')
+  assert.ok(/user\.id/.test(guard[0]), '上传入口未提前检查登录状态')
+})
+
+test('上传的分类跟随当前标签页，避免新图不在当前筛选结果里', function () {
+  const body = materialsSource.match(/saveUpload\(filePath\)\s*\{[\s\S]*?\n  \},/)[0]
+  assert.ok(/category:/.test(body), '上传未指定分类')
+  assert.ok(/this\.data\.active/.test(body), '分类未跟随当前标签页')
+})
+
+test('缩略图取不到时不再静默成空白格子', function () {
+  const body = materialsSource.match(/loadThumb\(id, storagePath\)\s*\{[\s\S]*?\n  \},/)[0]
+  assert.ok(/console\./.test(body), '缩略图失败未留痕，事后无从查起')
+  assert.ok(/retryThumb\(/.test(materialsSource), '缺少缩略图重试入口')
+  assert.ok(/bindtap="retryThumb"/.test(materialsWxml), 'WXML 未接重试')
+  assert.ok(/thumb-pending/.test(materialsWxml), '没有为取不到图的格子留占位')
+})
+
 // ---- 运行 ----
 let passed = 0
 let failed = 0

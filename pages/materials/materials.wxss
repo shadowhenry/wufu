@@ -76,6 +76,26 @@
   background: #efe7d8;
 }
 
+/* 云端素材没取到图时的占位：可点重试，不留一个说不清的空白格子 */
+.thumb-pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pending-text {
+  font-size: 22rpx;
+  color: #8a7a63;
+  line-height: 1.6;
+}
+
+.pending-hint {
+  font-size: 20rpx;
+  color: #8a6a3b;
+  line-height: 1.6;
+}
+
 /* 删除做成角标圆点，避免在纯图墙上出现文字块 */
 .cell-del {
   position: absolute;
