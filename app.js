@@ -36,6 +36,15 @@ App({
       if (session) {
         this.globalData.user = session.user || null
         this.globalData.signedIn = true
+        // 会话是异步恢复的，页面 onLoad 常常比它先跑完。这里留一份痕迹，
+        // 写入类功能（上传、出图）取不到 uid 时能一眼看出是身份没拿到。
+        console.info(
+          '[app] session user',
+          JSON.stringify({
+            id: this.globalData.user ? this.globalData.user.id : null,
+            keys: this.globalData.user ? Object.keys(this.globalData.user).join(',') : ''
+          })
+        )
       }
     } catch (error) {
       this.globalData.signedIn = false

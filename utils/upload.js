@@ -16,6 +16,25 @@ const repo = require('./repository')
  * @param {{ name?: string, category?: string, source?: string, prompt?: string }} [options]
  * @returns {Promise<{ storagePath: string, info: object }>}
  */
+/**
+ * 把 SDK 的错误摊平成一句能看懂的原因。
+ * 上传链路有三步（压缩 / 传对象 / 写库），只报「上传失败」等于没报——
+ * 用户和开发者都看不出是哪一步、为什么。
+ */
+function shortReason(error) {
+  const source = error || {}
+  const nested = source.error || {}
+  const text = [
+    source.message,
+    nested.message,
+    nested.error_description,
+    source.kind
+  ]
+    .filter((item) => typeof item === 'string' && item && !/^HTTP \d+$/.test(item))
+    .join(' / ')
+  return text || (source.status ? 'HTTP ' + source.status : '未知原因')
+}
+
 async function saveToMaterials(app, filePath, options) {
   const meta = options || {}
   const user = (app && app.globalData && app.globalData.user) || {}
@@ -23,26 +42,47 @@ async function saveToMaterials(app, filePath, options) {
   // 插入也会被 RLS 拒（owner_id 取不到 auth.uid()），
   // 最后只在界面上落一个「上传失败」，看不出到底卡在哪。
   if (!user.id) {
-    throw new Error('登录状态没拿到，请重新登录后再上传')
+    throw new Error('登录状态没拿到（uid 为空），请重新登录后再上传')
   }
-  const compressed = await image.compressUnderLimit(filePath)
+
+  let compressed
+  try {
+    compressed = await image.compressUnderLimit(filePath)
+  } catch (error) {
+    console.error('[upload] 压缩失败', error)
+    throw new Error('压缩失败：' + shortReason(error))
+  }
   if (compressed.stillOversize) {
     throw new Error('图片过大（' + image.formatSize(compressed.bytes) + '），换一张试试')
   }
   console.info('[upload] 压缩完成', image.formatSize(compressed.bytes))
-  const storagePath = await repo.uploadLocalFile(user.id, 'materials', compressed.path, 'image/jpeg')
+
+  let storagePath
+  try {
+    storagePath = await repo.uploadLocalFile(user.id, 'materials', compressed.path, 'image/jpeg')
+  } catch (error) {
+    console.error('[upload] 上传对象失败', error)
+    throw new Error('上传到云存储失败：' + shortReason(error))
+  }
   console.info('[upload] 已上传对象', storagePath)
-  const row = await repo.insertMaterial({
-    name: meta.name || '我的素材',
-    category: meta.category || 'landscape',
-    source: meta.source || 'upload',
-    storage_path: storagePath,
-    prompt: meta.prompt || null,
-    width: compressed.width,
-    height: compressed.height,
-    owner_name: user.name || null
-  })
-  console.info('[upload] 已建素材记录', JSON.stringify(row || null))
+
+  try {
+    const row = await repo.insertMaterial({
+      name: meta.name || '我的素材',
+      category: meta.category || 'landscape',
+      source: meta.source || 'upload',
+      storage_path: storagePath,
+      prompt: meta.prompt || null,
+      width: compressed.width,
+      height: compressed.height,
+      owner_name: user.name || null
+    })
+    console.info('[upload] 已建素材记录', JSON.stringify(row || null))
+  } catch (error) {
+    console.error('[upload] 写入素材表失败', error)
+    throw new Error('写入素材库失败：' + shortReason(error))
+  }
+
   return { storagePath: storagePath, info: compressed }
 }
 

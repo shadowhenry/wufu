@@ -217,6 +217,7 @@ Page({
         })
         .catch((error) => {
           wx.hideLoading()
+          console.error('[materials] 上传失败', error)
           app.reportError(error, '上传失败')
         })
     })
